@@ -4,3 +4,4 @@
 2. Code code and code.
 3. Push your code into *your branch*.
 4. Create pull request to merger your code to main branch.
+5. Admin will accept your require, review and merger your code into main branch.
