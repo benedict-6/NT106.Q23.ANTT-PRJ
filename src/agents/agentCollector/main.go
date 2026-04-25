@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	socketPath    = "./agent_queue.sock" // Keep socket in local folder or /tmp
-	serverBaseURL = "http://localhost:8080"
+	socketPath    = "/tmp/agent_queue.sock" // Keep socket in local folder or /tmp
+	serverBaseURL = "http://localhost:3000"
 	secretKey     = "supersecretkey1234567890123456" // Used for AES payload encryption
 	configPath    = "./agent_metadata.json"
 )
@@ -92,7 +92,7 @@ func main() {
 	}
 }
 
-// ---- Authentication Logic ----
+// // ---- Authentication Logic ----
 
 func setupAuthentication() error {
 	// Kiểm tra xem file cấu hình có tồn tại không
@@ -102,17 +102,17 @@ func setupAuthentication() error {
 		if hostname == "" {
 			hostname = "unknown_device"
 		}
-		
+
 		// Random password 12 kí tự
 		passBytes := make([]byte, 6)
 		rand.Read(passBytes)
 		randomPass := fmt.Sprintf("%x", passBytes)
-		
+
 		currentConfig = AgentConfig{
 			Username: "agent_" + hostname,
 			Password: randomPass,
 		}
-		
+
 		log.Printf("[!] CHƯA CÓ CẤU HÌNH. Tiến hành Đăng ký hệ thống với Master Node...")
 		if err := registerAgent(currentConfig); err != nil {
 			log.Printf("Warning: Đăng ký thất bại (có thể server chưa bật). Sẽ thử lại sau: %v", err)
@@ -150,14 +150,18 @@ func registerAgent(cfg AgentConfig) error {
 		"password": cfg.Password,
 		"info":     "Agent Device Node",
 	})
-	
+
 	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/register", bytes.NewReader(payload))
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
@@ -171,14 +175,18 @@ func loginAgent() error {
 		"username": currentConfig.Username,
 		"password": currentConfig.Password,
 	})
-	
+
 	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/login", bytes.NewReader(payload))
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
@@ -266,11 +274,13 @@ func sendBatch(batch [][]byte) {
 
 	// 4. Send to server
 	req, err := http.NewRequest("POST", serverBaseURL+"/upload", bytes.NewReader(encrypted))
-	if err != nil { return }
-	
+	if err != nil {
+		return
+	}
+
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Content-Encoding", "aes-gcm")
-	
+
 	// Thêm Access Token vào Header để xác thực tiến trình gửi
 	token := currentConfig.AccessToken
 	if token != "" {
@@ -297,13 +307,19 @@ func sendBatch(batch [][]byte) {
 
 func encrypt(plaintext, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	aesgcm, err := cipher.NewGCM(block)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	nonce := make([]byte, aesgcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil { return nil, err }
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
 
 	ciphertext := aesgcm.Seal(nonce, nonce, plaintext, nil)
 	return ciphertext, nil

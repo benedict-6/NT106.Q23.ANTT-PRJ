@@ -51,9 +51,9 @@ int main() {
         std::string payload = "{\"type\": \"net_pro\", \"metadata\": " + line + "}\n";
 
         // Send to Unix Socket
-        if (send(sock, payload.c_str(), payload.length(), 0) < 0) {
-            std::cerr << "NetProCollector: Send failed. Exiting." << std::endl;
-            break;
+        while (send(sock, payload.c_str(), payload.length(), 0) < 0) {
+            std::cerr << "NetProCollector: Send failed. Retrying in 2 seconds..." << std::endl;
+            sleep(2);
         }
     }
 
