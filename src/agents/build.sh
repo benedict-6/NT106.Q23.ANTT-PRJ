@@ -13,7 +13,7 @@ cd agentCollector
 go build -o ../$BUILD_DIR/agentCollector main.go
 cd ..
 
-echo "2. Building NetProCollector (Golang & eBPF)..."
+echo "2. Building NetProCollector (C++ & eBPF)..."
 cd NetProCollector
 # Assuming ecc is executable and paths are resolving
 # If ecc is not natively runnable on build env without setup, this might fail.

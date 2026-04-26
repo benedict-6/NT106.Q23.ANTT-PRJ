@@ -33,66 +33,41 @@ go run main.go
 ```
 Khi chạy thành công, nó sẽ hiển thị `Listening on Unix socket: /tmp/agent_queue.sock` và thiết lập quyền truy cập chung.
 
-### Bước 3.2: Biên dịch và chạy NetProCollector (eBPF + Go)
-Mở một terminal khác (Yêu cầu quyền sudo để tải eBPF module thông qua `ecli` bên trong mã Go):
+### Bước 3.2: Biên dịch và chạy NetProCollector (eBPF)
+Mở một terminal (phiên chạy) C++ khác (Yêu cầu quyền sudo để tải eBPF module):
 
 ```bash
 cd NetProCollector
-# Biên dịch BPF C header resource => package.json bằng lệnh dưới nếu chưa có
-sudo ./ebpf/tools/ecc ebpf/netpro.bpf.c ebpf/netpro.h
+# Dịch BPF C header resource => package.json
+sudo ./ebpf/tools/ecc ebpf/netpro.bpf.c
 
-# Khởi chạy Go wrapper (tự động gọi ecli ở background và đọc log)
-sudo go run main.go
+# Biên dịch chương trình chuyển phát của C++
+g++ NetProCollector.cpp -o NetProCollector
+
+# Bật
+sudo ./NetProCollector
 ```
 
-### Bước 3.3: Chạy các Module Khác (Golang)
-Ở các tab terminal khác, lần lượt chạy trực tiếp bằng `go run`:
+### Bước 3.3: Chạy các Module Khác
+Ở các tag shell khác, lần lượt biên dịch bằng G++ vào tạo tiến trình phụ:
 ```bash
 # Log Collector
 cd LogCollector
-go run main.go
+g++ LogCollector.cpp -o LogCollector
+./LogCollector
 
 # File Collector
 cd ../FileCollector
-go run main.go
+g++ FileCollector.cpp -o FileCollector
+./FileCollector
 
 # Software Collector
 cd ../SoftwareCollector
-go run main.go
+g++ SoftwareCollector.cpp -o SoftwareCollector
+./SoftwareCollector
 ```
-
-**Lưu ý:** Bạn cũng có thể dùng file script chung `build.sh` tại thư mục gốc `src/agents/` để biên dịch tất cả ra file nhị phân trong thư mục `dist_agent/`. Script tự động sử dụng `go build` trên tất cả module.
 
 ## 4. Kiểm tra
 - Ở các cửa sổ chạy Collector, bạn sẽ thấy trạng thái báo `Connected to agentCollector`.
-- Hãy thử tạo tác động như: 
-  - Thêm nội dung vào `/var/log/auth.log` (`LogCollector`).
-  - Sửa quyền hoặc nội dung `/etc/passwd` (`FileCollector`).
-- Tại cổng `localhost:8080`, dữ liệu AES-GCM nén lại sẽ được gửi kèm header `Content-Encoding: aes-gcm`. Đảm bảo tại back-end server có sử dụng cặp secret key giống nhau để giải mã.
-
-## 5. Đóng gói và Cài đặt tự động (.deb)
-
-Để thuận tiện cho việc phân phối và cài đặt tự động trên các máy Ubuntu/Debian, Agent hỗ trợ đóng gói dưới định dạng `.deb`.
-
-**Bước 1: Chạy script đóng gói**
-Tại thư mục `src/agents/`, chạy lệnh sau (yêu cầu máy có cài sẵn Go và dpkg-deb):
-```bash
-./build_deb.sh
-```
-Sau khi chạy xong, bạn sẽ thu được một file `siem-agent_1.0.0_amd64.deb`.
-
-**Bước 2: Cài đặt trên máy client**
-Copy file `.deb` sang máy cần cài đặt và chạy lệnh:
-```bash
-sudo apt install ./siem-agent_1.0.0_amd64.deb
-```
-Lệnh `apt install` sẽ tự động:
-1. Giải nén và chép các file vào `/opt/siem-agent/`.
-2. Tự động kiểm tra và cài đặt các dependency cần thiết (như **auditd**).
-3. Đăng ký dịch vụ `siem-agent.service` với Systemd và kích hoạt nó tự động chạy ngầm.
-
-**Các lệnh quản lý dịch vụ sau khi cài đặt:**
-- Kiểm tra trạng thái: `systemctl status siem-agent`
-- Khởi động lại: `sudo systemctl restart siem-agent`
-- Dừng dịch vụ: `sudo systemctl stop siem-agent`
-- Gỡ cài đặt hoàn toàn: `sudo apt remove siem-agent`
+- Hãy thử tạo tác động như: Đăng nhập sai mk (`Log`), Thêm quyền/edit mk với `touch /etc/passwd` (`File`), Trình đọc sẽ tự động lấy các tác vụ và mã hóa bắn lên server.
+- Tại cổng `localhost:8080`, dữ liệu AES-GCM nén lại sẽ được gửi kèm header `Content-Encoding: aes-gcm`. Đảm bảo tại back-end server có sử dụng cặp secret key giống nhau (`supersecretkey1234567890123456` ở bản nháp) để giải mã payload thu về.
