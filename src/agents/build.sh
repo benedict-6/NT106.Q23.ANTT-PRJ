@@ -19,17 +19,17 @@ cd NetProCollector
 # If ecc is not natively runnable on build env without setup, this might fail.
 # For demo, we just compile the C++ runner. Make sure package.json is pre-generated or generated here:
 sudo ./ebpf/tools/ecc ebpf/netpro.bpf.c ebpf/netpro.h || echo "Make sure to run ecc if this step fails due to permission"
-g++ NetProCollector.cpp -o ../$BUILD_DIR/NetProCollector
+go build -o ../$BUILD_DIR/NetProCollector main.go
 # Copy ecli and package.json
 mkdir -p ../$BUILD_DIR/ebpf/tools
 cp ebpf/package.json ../$BUILD_DIR/ebpf/
 cp ebpf/tools/ecli ../$BUILD_DIR/ebpf/tools/
 cd ..
 
-echo "3. Building Log, File, and Software Collectors (C++)..."
-cd LogCollector && g++ LogCollector.cpp -o ../$BUILD_DIR/LogCollector && cd ..
-cd FileCollector && g++ FileCollector.cpp -o ../$BUILD_DIR/FileCollector && cd ..
-cd SoftwareCollector && g++ SoftwareCollector.cpp -o ../$BUILD_DIR/SoftwareCollector && cd ..
+echo "3. Building Log, File, and Software Collectors (Golang)..."
+cd LogCollector && go build -o ../$BUILD_DIR/LogCollector main.go && cd ..
+cd FileCollector && go build -o ../$BUILD_DIR/FileCollector main.go && cd ..
+cd SoftwareCollector && go build -o ../$BUILD_DIR/SoftwareCollector main.go && cd ..
 
 echo "4. Creating unified start script..."
 cat << 'EOF' > "$BUILD_DIR/start.sh"
