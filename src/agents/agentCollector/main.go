@@ -92,11 +92,7 @@ func main() {
 	}
 }
 
-<<<<<<< HEAD
 // // ---- Authentication Logic ----
-=======
-// ---- Authentication Logic ----
->>>>>>> 7e7693a (agent completed)
 
 func setupAuthentication() error {
 	// Kiểm tra xem file cấu hình có tồn tại không
@@ -106,29 +102,17 @@ func setupAuthentication() error {
 		if hostname == "" {
 			hostname = "unknown_device"
 		}
-<<<<<<< HEAD
 
-=======
-		
->>>>>>> 7e7693a (agent completed)
 		// Random password 12 kí tự
 		passBytes := make([]byte, 6)
 		rand.Read(passBytes)
 		randomPass := fmt.Sprintf("%x", passBytes)
-<<<<<<< HEAD
 
-=======
-		
->>>>>>> 7e7693a (agent completed)
 		currentConfig = AgentConfig{
 			Username: "agent_" + hostname,
 			Password: randomPass,
 		}
-<<<<<<< HEAD
 
-=======
-		
->>>>>>> 7e7693a (agent completed)
 		log.Printf("[!] CHƯA CÓ CẤU HÌNH. Tiến hành Đăng ký hệ thống với Master Node...")
 		if err := registerAgent(currentConfig); err != nil {
 			log.Printf("Warning: Đăng ký thất bại (có thể server chưa bật). Sẽ thử lại sau: %v", err)
@@ -166,28 +150,18 @@ func registerAgent(cfg AgentConfig) error {
 		"password": cfg.Password,
 		"info":     "Agent Device Node",
 	})
-<<<<<<< HEAD
 
 	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/register", bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
-=======
-	
-	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/register", bytes.NewReader(payload))
-	if err != nil { return err }
->>>>>>> 7e7693a (agent completed)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
-<<<<<<< HEAD
 	if err != nil {
 		return err
 	}
-=======
-	if err != nil { return err }
->>>>>>> 7e7693a (agent completed)
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
@@ -201,28 +175,18 @@ func loginAgent() error {
 		"username": currentConfig.Username,
 		"password": currentConfig.Password,
 	})
-<<<<<<< HEAD
 
 	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/login", bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
-=======
-	
-	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/login", bytes.NewReader(payload))
-	if err != nil { return err }
->>>>>>> 7e7693a (agent completed)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
-<<<<<<< HEAD
 	if err != nil {
 		return err
 	}
-=======
-	if err != nil { return err }
->>>>>>> 7e7693a (agent completed)
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
@@ -310,7 +274,6 @@ func sendBatch(batch [][]byte) {
 
 	// 4. Send to server
 	req, err := http.NewRequest("POST", serverBaseURL+"/upload", bytes.NewReader(encrypted))
-<<<<<<< HEAD
 	if err != nil {
 		return
 	}
@@ -318,13 +281,6 @@ func sendBatch(batch [][]byte) {
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Content-Encoding", "aes-gcm")
 
-=======
-	if err != nil { return }
-	
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Content-Encoding", "aes-gcm")
-	
->>>>>>> 7e7693a (agent completed)
 	// Thêm Access Token vào Header để xác thực tiến trình gửi
 	token := currentConfig.AccessToken
 	if token != "" {
@@ -351,7 +307,6 @@ func sendBatch(batch [][]byte) {
 
 func encrypt(plaintext, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-<<<<<<< HEAD
 	if err != nil {
 		return nil, err
 	}
@@ -365,15 +320,6 @@ func encrypt(plaintext, key []byte) ([]byte, error) {
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, err
 	}
-=======
-	if err != nil { return nil, err }
-
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil { return nil, err }
-
-	nonce := make([]byte, aesgcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil { return nil, err }
->>>>>>> 7e7693a (agent completed)
 
 	ciphertext := aesgcm.Seal(nonce, nonce, plaintext, nil)
 	return ciphertext, nil
