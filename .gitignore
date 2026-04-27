@@ -1,3 +1,4 @@
 test_agent/
 report/
+data/
 src/Server/.env
