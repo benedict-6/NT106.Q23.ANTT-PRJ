@@ -2,4 +2,4 @@ test_agent/
 report/
 data/
 src/Server/.env
-.vscode/
+src/Server/node_modules
