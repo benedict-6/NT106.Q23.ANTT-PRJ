@@ -3,40 +3,8 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
 
-#define TASK_COMM_LEN 16
-
-enum event_type {
-    EV_TCP_CONNECT,
-    EV_TCP_ACCEPT,
-    EV_TCP_STATE,
-    EV_UDP_SEND,
-    EV_UDP_RECV,
-    EV_PROC_FORK,
-    EV_PROC_EXEC,
-    EV_PROC_EXIT
-};
-
-// Define event structure that eunomia-bpf will print as JSON
-struct event {
-    unsigned long long timestamp;
-    u32 pid;
-    u32 ppid; // for fork
-    u32 type; // event_type
-    
-    // network
-    u32 saddr;
-    u32 daddr;
-    u16 sport;
-    u16 dport;
-    u8 family;
-    u8 protocol; // 6 for TCP, 17 for UDP
-    int state;
-    
-    // process
-    int exit_code;
-    char comm[TASK_COMM_LEN];
-    char filename[256];
-};
+#define AF_INET 2
+#include "netpro.h"
 
 // Force emit the struct into BTF so eunomia can parse it
 const struct event *unused __attribute__((unused));
@@ -58,14 +26,15 @@ static __always_inline void fill_net_info(struct event *e, struct sock *sk) {
 
 // ---------------- TCP HOOKS ----------------
 
-SEC("fentry/inet_sock_set_state")
-int BPF_PROG(tcp_set_state, struct sock *sk, int oldstate, int newstate)
+SEC("kprobe/tcp_set_state")
+int BPF_KPROBE(tcp_set_state, struct sock *sk, int newstate)
 {
     if (BPF_CORE_READ(sk, __sk_common.skc_family) != AF_INET)
         return 0; // IPv4 only for simplicity
 
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
     
     e->type = EV_TCP_STATE;
     e->timestamp = bpf_ktime_get_ns();
@@ -78,14 +47,15 @@ int BPF_PROG(tcp_set_state, struct sock *sk, int oldstate, int newstate)
     return 0;
 }
 
-SEC("fentry/tcp_connect")
-int BPF_PROG(tcp_connect, struct sock *sk)
+SEC("kprobe/tcp_connect")
+int BPF_KPROBE(tcp_connect, struct sock *sk)
 {
     if (BPF_CORE_READ(sk, __sk_common.skc_family) != AF_INET)
         return 0;
 
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
     e->type = EV_TCP_CONNECT;
     e->timestamp = bpf_ktime_get_ns();
@@ -98,8 +68,8 @@ int BPF_PROG(tcp_connect, struct sock *sk)
     return 0;
 }
 
-SEC("fexit/inet_csk_accept")
-int BPF_PROG(tcp_accept, struct sock *sk, int flags, int *err, bool kern, struct sock *ret_sk)
+SEC("kretprobe/inet_csk_accept")
+int BPF_KRETPROBE(tcp_accept, struct sock *ret_sk)
 {
     if (!ret_sk) return 0;
 
@@ -108,6 +78,7 @@ int BPF_PROG(tcp_accept, struct sock *sk, int flags, int *err, bool kern, struct
 
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
     e->type = EV_TCP_ACCEPT;
     e->timestamp = bpf_ktime_get_ns();
@@ -123,14 +94,15 @@ int BPF_PROG(tcp_accept, struct sock *sk, int flags, int *err, bool kern, struct
 // ---------------- UDP HOOKS ----------------
 // Note: UDP doesn't have connect in the same way, we hook sendmsg and recvmsg
 
-SEC("fentry/udp_sendmsg")
-int BPF_PROG(udp_send, struct sock *sk, struct msghdr *msg, size_t len)
+SEC("kprobe/udp_sendmsg")
+int BPF_KPROBE(udp_send, struct sock *sk, struct msghdr *msg, size_t len)
 {
     if (BPF_CORE_READ(sk, __sk_common.skc_family) != AF_INET)
         return 0;
 
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
     e->type = EV_UDP_SEND;
     e->timestamp = bpf_ktime_get_ns();
@@ -143,14 +115,15 @@ int BPF_PROG(udp_send, struct sock *sk, struct msghdr *msg, size_t len)
     return 0;
 }
 
-SEC("fentry/udp_recvmsg")
-int BPF_PROG(udp_recv, struct sock *sk, struct msghdr *msg, size_t len, int noblock, int flags, int *addr_len)
+SEC("kprobe/udp_recvmsg")
+int BPF_KPROBE(udp_recv, struct sock *sk, struct msghdr *msg, size_t len, int noblock, int flags, int *addr_len)
 {
     if (BPF_CORE_READ(sk, __sk_common.skc_family) != AF_INET)
         return 0;
 
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
     e->type = EV_UDP_RECV;
     e->timestamp = bpf_ktime_get_ns();
@@ -162,23 +135,25 @@ int BPF_PROG(udp_recv, struct sock *sk, struct msghdr *msg, size_t len, int nobl
     return 0;
 }
 
+
 // ---------------- PROCESS HOOKS ----------------
 
-// We'll use tracepoint instead of fentry for process, tracepoints are generally more stable, 
-// but since you asked for fentry/_do_fork, it's actually kernel_clone in newer kernels (> 5.10).
-// I will use kprobe/kernel_clone (or sys_clone) as fallback, but I'll use kprobe for do_execveat_common for wide compat.
+// ---------------- PROCESS HOOKS ----------------
 
-SEC("kprobe/kernel_clone")
-int BPF_KPROBE(kprobe_kernel_clone)
+// Using tracepoints for process lifecycle events as requested
+// Tracepoints provide stable and reliable event hooking.
+
+SEC("tracepoint/sched/sched_process_fork")
+int tracepoint_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx)
 {
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
-    u64 id = bpf_get_current_pid_tgid();
     e->type = EV_PROC_FORK;
     e->timestamp = bpf_ktime_get_ns();
-    e->pid = id >> 32; // In clone context it's tricky, but this is the parent's PID
-    e->ppid = e->pid; 
+    e->ppid = ctx->parent_pid;
+    e->pid = ctx->child_pid;
     
     bpf_get_current_comm(&e->comm, sizeof(e->comm));
     
@@ -186,11 +161,12 @@ int BPF_KPROBE(kprobe_kernel_clone)
     return 0;
 }
 
-SEC("kprobe/do_execveat_common")
-int BPF_KPROBE(kprobe_do_execveat_common, int fd, struct filename *filename)
+SEC("tracepoint/syscalls/sys_enter_execve")
+int tracepoint_sys_enter_execve(struct trace_event_raw_sys_enter *ctx)
 {
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
     e->type = EV_PROC_EXEC;
     e->timestamp = bpf_ktime_get_ns();
@@ -198,24 +174,28 @@ int BPF_KPROBE(kprobe_do_execveat_common, int fd, struct filename *filename)
     
     bpf_get_current_comm(&e->comm, sizeof(e->comm));
     
-    const char *name;
-    bpf_core_read(&name, sizeof(name), &filename->name);
-    bpf_probe_read_kernel_str(&e->filename, sizeof(e->filename), name);
+    // In sys_enter_execve, ctx->args[0] holds the pointer to the filename in userspace
+    const char *fname = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&e->filename, sizeof(e->filename), fname);
     
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
 
-SEC("kprobe/do_exit")
-int BPF_KPROBE(kprobe_do_exit, long code)
+SEC("tracepoint/sched/sched_process_exit")
+int tracepoint_sched_process_exit(struct trace_event_raw_sched_process_template *ctx)
 {
     struct event *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) return 0;
+    __builtin_memset(e, 0, sizeof(*e));
 
     e->type = EV_PROC_EXIT;
     e->timestamp = bpf_ktime_get_ns();
     e->pid = bpf_get_current_pid_tgid() >> 32;
-    e->exit_code = code;
+    
+    // Get exit_code directly from task_struct safely
+    struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    e->exit_code = BPF_CORE_READ(task, exit_code);
     
     bpf_get_current_comm(&e->comm, sizeof(e->comm));
     

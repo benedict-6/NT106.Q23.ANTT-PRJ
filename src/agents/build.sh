@@ -18,7 +18,7 @@ cd NetProCollector
 # Assuming ecc is executable and paths are resolving
 # If ecc is not natively runnable on build env without setup, this might fail.
 # For demo, we just compile the C++ runner. Make sure package.json is pre-generated or generated here:
-sudo ./ebpf/tools/ecc ebpf/netpro.bpf.c || echo "Make sure to run ecc if this step fails due to permission"
+sudo ./ebpf/tools/ecc ebpf/netpro.bpf.c ebpf/netpro.h || echo "Make sure to run ecc if this step fails due to permission"
 g++ NetProCollector.cpp -o ../$BUILD_DIR/NetProCollector
 # Copy ecli and package.json
 mkdir -p ../$BUILD_DIR/ebpf/tools
