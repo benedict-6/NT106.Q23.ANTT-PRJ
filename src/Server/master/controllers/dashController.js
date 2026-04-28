@@ -28,7 +28,7 @@ const dashController = {
 			// Save to DB 
 			// Secret key is encrypted 
 			await pool.query(
-				`INSERT INTO agents (agent_id, secert_key, secret_key_iv, secret_key_auth_tag ,description, status)
+				`INSERT INTO agents (agent_id, secret_key, secret_key_iv, secret_key_auth_tag ,agent_description, agent_status)
 				 VALUES ($1, $2, $3, $4, $5, 'Active')`,
 				 [agentID, ciphetobj.cipherText, ciphetobj.iv, ciphetobj.tag, description || 'No Description']
 			);

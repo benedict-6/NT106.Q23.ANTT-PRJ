@@ -1,21 +1,8 @@
 import bcrypt from 'bcryptjs';
 import crypto, { sign } from 'crypto';
 import pool from "../../shared/database/connect.js";
-import AES_MASTER_KEY from "../../process.env.AES_MASTER_KEY"
+import { GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
 
-function decrypt(cipherText, masterKey) {
-    const decipher = crypto.createDecipheriv(
-        'aes-256-gcm', 
-        masterKey, 
-        Buffer.from(cipherText.iv, 'hex')
-    );
-    
-    decipher.setAuthTag(Buffer.from(cipherText.tag, 'hex'));
-    
-    let decrypted = decipher.update(cipherText.content, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-}
 
 const agentController = {
     handshake: async (req, res) => {
@@ -53,8 +40,12 @@ const agentController = {
             }
 
             const payload = `${mac_address}|${timestamp}`;
-
-            const rawKey = decrypt(agent.secret_key, masterKey);
+            const cipherObject = {
+                encryptedData: agent.secret_key,
+                iv: agent.secret_key_iv,
+                authTag: agent.secret_key_auth_tag
+            }
+            const rawKey = decrypt(cipherObject);
 
             const expectedSignature = crypto.createHmac('sha256', rawKey).update(payload).digest('hex');
 

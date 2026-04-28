@@ -9,9 +9,10 @@ const router = express.Router();
 router.post('/login', authController.login);
 router.post('/register', authController.register);
 
-// 2. Các API CẦN bảo vệ (Phải qua ải verifyJWT)
+router.post('/agents/create', verifyJWT, dashController.createAgent);
+
 router.get('/dashboard', verifyJWT, (req, res) => {
-    // Nếu vào được đây, tức là JWT đã hợp lệ
+
     // req.user.userId đã có sẵn nhờ Middleware truyền sang
     res.json({ message: "Đây là giao diện của hệ thống monitoring", user_id: req.user.userId });
 });
