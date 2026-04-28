@@ -23,7 +23,11 @@ CREATE TABLE IF NOT EXISTS agents (
     hostname TEXT NOT NULL,
     ip_address INET NOT NULL,
     auth_token TEXT NOT NULL,
-    _status TEXT NOT NULL CHECK (_status IN ('online', 'offline'))
+    secret_key TEXT NOT NULL,
+    secret_key_iv TEXT NOT NULL,
+    secret_key_auth_tag TEXT NOT NULL,
+    agent_description TEXT,
+    agent_status TEXT NOT NULL CHECK (agent_status IN ('online', 'offline'))
 );
 
 CREATE TABLE IF NOT EXISTS applications (
