@@ -1,2 +1,7 @@
 test_agent/
 report/
+node_modules/
+.env
+src/Server/.env
+dist/
+build/
