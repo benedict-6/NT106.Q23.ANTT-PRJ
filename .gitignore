@@ -1,13 +1,3 @@
-test_agent/
-report/
-<<<<<<< HEAD
-node_modules/
+test
 .env
-src/Server/.env
-dist/
-build/
-=======
-data/
-src/Server/.env
-src/Server/node_modules
->>>>>>> af6b3aed677af55e4740d5c9f54a7fc2f7354def
+src/Server/node_modules/
