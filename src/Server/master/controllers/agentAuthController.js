@@ -1,5 +1,4 @@
-import bcrypt from 'bcryptjs';
-import crypto, { sign } from 'crypto';
+import crypto from 'crypto';
 import pool from "../../shared/database/connect.js";
 import { GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
 
@@ -17,20 +16,19 @@ const agentController = {
             // ==========================================
             const currentTime = Date.now();
             const clientTime = parseInt(timestamp, 10);
-            
+
             // Tính độ lệch thời gian giữa Master và Agent
             const timeDiff = Math.abs(currentTime - clientTime);
-            
+
             // Cửa sổ thời gian: 30 giây (30000 ms). 
             // Nếu gói tin cũ hơn 30s -> Bị bắt lại trên đường truyền -> Loại!
             if (timeDiff > 30000) {
                 console.warn(`[REPLAY ATTACK] Phát hiện gói tin cũ từ Agent: ${agent_id}`);
                 return res.status(401).json({ message: 'Gói tin đã hết hạn!' });
             }
-            
+
             const result = await pool.query(
-                // Truy xuất phần tử đầu tiên của mảng -> [agent_id] là agent_id -> tránh dùng '"' + agent_id + '"' vì SQL injection
-                "SELECT * FROM agents WHERE agent_id = $1 AND status = 'Active'",
+                "SELECT * FROM agents WHERE agent_id = $1 AND agent_status = 'Active'",
                 [agent_id]
             );
             const agent = result.rows[0];
@@ -50,12 +48,12 @@ const agentController = {
             const expectedSignature = crypto.createHmac('sha256', rawKey).update(payload).digest('hex');
 
             // Không dùng toán tử "===" để so sánh chuỗi băm
-            // Chuyển về buffer và dùng timingSafeEqual để choongs timing attack
+            // Chuyển về buffer và dùng timingSafeEqual để chống timing attack
 
             const expectBuffer = Buffer.from(expectedSignature);
             const receiveBuffer = Buffer.from(signature);
-            
-            if (expectBuffer.length !== receiveBuffer.length || !crypto.timingSafeEqual(expectBuffer,receiveBuffer)) {
+
+            if (expectBuffer.length !== receiveBuffer.length || !crypto.timingSafeEqual(expectBuffer, receiveBuffer)) {
                 console.warn(`[CẢNH BÁO] Phát hiện mạo danh trên Agent: ${agent_id}`);
                 return res.status(401).json({ message: 'Chữ ký không hợp lê. Từ chối truy cập!' });
             }
@@ -64,15 +62,32 @@ const agentController = {
             // Sinh Session Token ngẫu nhiên
             const sessionToken = crypto.randomBytes(32).toString('hex');
 
-            // Lưu Session Token vào DB để quản lý (Hoặc lưu vào Redis)
+            // Lưu Session Token vào DB + cập nhật trạng thái online
             await pool.query(
-                "UPDATE agents SET current_session = $1, last_active = NOW() WHERE agent_id = $2",
-                [sessionToken, agent_id]
+                `UPDATE agents SET current_session = $1, last_active = NOW(), 
+                 hostname = $3, mac_address = $4
+                 WHERE agent_id = $2`,
+                [sessionToken, agent_id, req.body.hostname || null, mac_address || null]
             );
 
-            res.status(200).json({ 
-                message: 'Handshake thành công!',
-                session_token: sessionToken 
+            // REAL-TIME: Emit Socket.IO event cho UI
+            const io = req.app.get('io');
+            if (io && agent.user_id) {
+                const agentInfo = {
+                    agent_id: agent.agent_id,
+                    agent_description: agent.agent_description,
+                    hostname: req.body.hostname || null,
+                    mac_address: mac_address,
+                    agent_status: agent.agent_status,
+                    last_active: new Date().toISOString()
+                };
+                io.to(`user:${agent.user_id}`).emit('agent:connected', agentInfo);
+                console.log(`[SOCKET.IO] Emitted agent:connected for ${agent_id} to user:${agent.user_id}`);
+            }
+
+            res.status(200).json({
+                message: 'OK!',
+                session_token: sessionToken
             });
 
         } catch (err) {
@@ -83,5 +98,3 @@ const agentController = {
 };
 
 export default agentController;
-
-    

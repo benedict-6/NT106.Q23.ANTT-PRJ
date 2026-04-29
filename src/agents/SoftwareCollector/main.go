@@ -76,10 +76,25 @@ func main() {
 			data, _ := json.Marshal(event)
 			data = append(data, '\n')
 
-			_, err = conn.Write(data)
-			if err != nil {
-				log.Printf("SoftwareCollector: Send failed: %v", err)
-				break
+			for {
+				_, err = conn.Write(data)
+				if err == nil {
+					break
+				}
+
+				log.Println("SoftwareCollector: Send failed. Reconnecting...")
+				time.Sleep(2 * time.Second)
+
+				conn.Close()
+
+				for {
+					conn, err = net.Dial("unix", socketPath)
+					if err == nil {
+						log.Println("SoftwareCollector: Reconnected")
+						break
+					}
+					time.Sleep(2 * time.Second)
+				}
 			}
 		}
 

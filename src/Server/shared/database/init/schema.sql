@@ -4,9 +4,9 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    _role TEXT NOT NULL CHECK (_role IN ('admin', 'viewer')),
+    _role TEXT NOT NULL DEFAULT 'admin' CHECK (_role IN ('admin', 'viewer')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS servers (
     _status TEXT NOT NULL CHECK (_status IN ('active', 'inactive', 'busy'))
 );
 
+-- agent_id dạng TEXT (AGT-XXXXXXXX) do dashController sinh ra
+-- user_id FK liên kết agent thuộc user nào
 CREATE TABLE IF NOT EXISTS agents (
     agent_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mac_address MACADDR NOT NULL,
@@ -36,7 +38,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
 CREATE TABLE IF NOT EXISTS applications (
     app_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    agent_id UUID NOT NULL,
+    agent_id TEXT NOT NULL,
     software_name TEXT,
     _version TEXT,
     CONSTRAINT fk_application_agent FOREIGN KEY (agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE
@@ -44,7 +46,7 @@ CREATE TABLE IF NOT EXISTS applications (
 
 CREATE TABLE IF NOT EXISTS process_logs (
     process_log_id BIGSERIAL,
-    agent_id UUID NOT NULL,
+    agent_id TEXT NOT NULL,
     _status TEXT NOT NULL CHECK (_status IN ('Start', 'Stop', 'Running')),
     pid INTEGER NOT NULL,
     process_name TEXT NOT NULL,
@@ -57,7 +59,7 @@ CREATE TABLE IF NOT EXISTS process_logs (
 
 CREATE TABLE IF NOT EXISTS network_logs (
     netlog_id BIGSERIAL,
-    agent_id UUID NOT NULL,
+    agent_id TEXT NOT NULL,
     src_ip INET,
     dest_ip INET,
     protocol TEXT NOT NULL CHECK (protocol IN ('TCP', 'UDP')),
@@ -71,7 +73,7 @@ CREATE TABLE IF NOT EXISTS network_logs (
 
 CREATE TABLE IF NOT EXISTS file_logs (
     file_log_id BIGSERIAL,
-    agent_id UUID NOT NULL,
+    agent_id TEXT NOT NULL,
     file_path TEXT NOT NULL,
     change_type TEXT NOT NULL CHECK (change_type IN ('Created', 'Modified', 'Deleted')),
     old_hash TEXT,

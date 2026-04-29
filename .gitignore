@@ -2,7 +2,7 @@ test_agent/
 report/
 data/
 src/Server/.env
-dist/
+dist_agent/
 build/
 data/
 src/Server/node_modules/
