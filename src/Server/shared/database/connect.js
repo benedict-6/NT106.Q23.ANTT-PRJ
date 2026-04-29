@@ -1,14 +1,22 @@
 // ---> CODE CHUNG DÙNG CHO CẢ MASTER VÀ WORKER
 // Khởi tạo pool kết nối CSDL (Mongo/Postgres/Elasticsearch)
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config({
+  path: path.resolve("shared/database/.env")
+});
+
+
+
 import pkg from "pg";
 const { Pool } = pkg;
 
 // Create a new pool instance
 const pool = new Pool({
-  user: process.env.DB_USER || "postgres",
+  user: process.env.POSTGRES_USER || "postgres",
   host: process.env.DB_HOST || "localhost",
-  database: process.env.DB_NAME || "your_db",
-  password: process.env.DB_PASSWORD,
+  database: process.env.POSTGRES_DB || "your_db",
+  password: process.env.POSTGRES_PASSWORD,
   port: process.env.DB_PORT || 5432,
 
   // optional configs

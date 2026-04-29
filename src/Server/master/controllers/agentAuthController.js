@@ -45,7 +45,7 @@ const agentController = {
                 iv: agent.secret_key_iv,
                 authTag: agent.secret_key_auth_tag
             }
-            const rawKey = decrypt(cipherObject);
+            const rawKey = GCMdecrypt(cipherObject);
 
             const expectedSignature = crypto.createHmac('sha256', rawKey).update(payload).digest('hex');
 
