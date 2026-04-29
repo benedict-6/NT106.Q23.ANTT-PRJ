@@ -1,17 +1,18 @@
 // test server
 import express from "express";
 import dotenv from "dotenv";
+
+dotenv.config();
+
 import pool from "./shared/database/connect.js";
 
 // Import Middlewares
-import verifyJWT from "./middleware/verifyJWT.js";
+import verifyJWT from "./master/Middleware/verifyJWT.js";
 
 // Import Controllers
-import authController from "./controllers/authController.js";
-import dashController from "./controllers/dashController.js";
-import agentController from "./controllers/agentAuthController.js";
-
-dotenv.config();
+import authController from "./master/controllers/authController.js";
+import dashController from "./master/controllers/dashController.js";
+import agentController from "./master/controllers/agentAuthController.js";
 const app = express();
 app.use(express.json());
 
