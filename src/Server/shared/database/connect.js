@@ -1,7 +1,7 @@
 // ---> CODE CHUNG DÙNG CHO CẢ MASTER VÀ WORKER
 // Khởi tạo pool kết nối CSDL (Mongo/Postgres/Elasticsearch)
-import path from "path";
 import dotenv from "dotenv";
+<<<<<<< HEAD
 dotenv.config({
   path: path.resolve('../../../../.env')
 });

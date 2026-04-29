@@ -42,11 +42,24 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Chạy Go Agent Collector
+# Kiểm tra file cấu hình agent_config.json
+if [ ! -f "./agent_config.json" ]; then
+  echo "============================================"
+  echo "  LỖI: Không tìm thấy file agent_config.json"
+  echo "  Hãy tải config từ Dashboard trước:"
+  echo "    1. Đăng nhập Web Dashboard"
+  echo "    2. Tạo Agent mới"
+  echo "    3. Download config file"
+  echo "    4. Đặt file agent_config.json vào thư mục này"
+  echo "============================================"
+  exit 1
+fi
+
+# Chạy Go Agent Collector (handshake + quản lý dữ liệu)
 echo "Đang khởi động Agent Collector..."
 ./agentCollector &
 AGENT_PID=$!
-sleep 2 # Đợi socket khởi tạo
+sleep 2 # Đợi socket khởi tạo + handshake
 
 # Chạy các module thu thập
 echo "Đang khởi động NetProCollector..."

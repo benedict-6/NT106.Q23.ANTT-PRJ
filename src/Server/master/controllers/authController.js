@@ -7,7 +7,7 @@ import pool from "../../shared/database/connect.js";
 
 const authController = {
     register: async (req, res) => {
-        const {user_email,password} = req.body;
+        const {user_email, password} = req.body;
 
         try {
             const email = await pool.query(
@@ -61,8 +61,8 @@ const authController = {
                 return res.status(400).json({message: 'Invalid email or password' }); // Password does not match
             }
 
-            const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '8h'});
-            res.json({token});
+            const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: '8h'});
+            res.json({ token, userId: user.user_id });
         }
         catch (err)
         {

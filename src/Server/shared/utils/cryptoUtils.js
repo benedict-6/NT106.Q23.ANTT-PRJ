@@ -1,7 +1,9 @@
 // ---> CODE CHUNG DÙNG CHO CẢ MASTER VÀ WORKER
 // Hàm dùng chung (Format thời gian, hash mật khẩu...)
 
-const getMasterKey = () => Buffer.from(process.env.AES_MASTER_KEY, 'hex')
+import crypto from 'crypto';
+
+const getMasterKey = () => Buffer.from(process.env.AES_MASTER_KEY, 'hex');
 
 export const GCMdecrypt = (cipherObj) => {
 	try{
@@ -31,14 +33,15 @@ export const GCMdecrypt = (cipherObj) => {
 }
 
 export const GCMencrypt = (plainText) => {
+	const masterKey = getMasterKey();
 	const iv = crypto.randomBytes(12);
 	const cipher = crypto.createCipheriv(
-		"aes-128-gcm",
-		masterkey,
+		"aes-256-gcm",
+		masterKey,
 		iv
 	);
 
-	let encrypted = cipher.update(Secret, 'utf-8', 'hex');
+	let encrypted = cipher.update(plainText, 'utf-8', 'hex');
 	encrypted += cipher.final('hex');
 
 	const tag = cipher.getAuthTag();
@@ -49,4 +52,3 @@ export const GCMencrypt = (plainText) => {
 		tag: tag.toString('hex')
 	};
 }
-
