@@ -2,6 +2,8 @@
 import express from 'express'
 import verifyJWT from '../Middleware/verifyJWT'
 import authController from '../controllers/authController'
+import dashController from '../controllers/dashController'
+
 
 const router = express.Router();
 

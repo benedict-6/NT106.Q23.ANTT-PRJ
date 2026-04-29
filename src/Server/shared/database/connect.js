@@ -17,10 +17,10 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 5432,
 
-  // optional configs
-  max: 10, // max number of clients in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  // // optional configs
+  // max: 10, // max number of clients in the pool
+  // idleTimeoutMillis: 30000,
+  // connectionTimeoutMillis: 2000,
 });
 
 // Optional: test connection
