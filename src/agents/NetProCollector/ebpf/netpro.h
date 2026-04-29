@@ -32,7 +32,7 @@ struct event {
     
     // process
     int exit_code;
-    char comm[32];
+    char comm[TASK_COMM_LEN];
     char filename[256];
 };
 

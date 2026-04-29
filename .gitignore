@@ -1,5 +1,8 @@
 test_agent/
 report/
-data/
 src/Server/.env
-src/Server/node_modules
+dist/
+build/
+data/
+src/Server/node_modules/
+src/agents/socket_debug.go
