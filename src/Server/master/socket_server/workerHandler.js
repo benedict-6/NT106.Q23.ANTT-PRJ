@@ -1,2 +1,8 @@
-// Master đóng vai trò Socket Server để các Worker nối vào
-// Quản lý danh sách worker, đẩy rules xuống worker
+// master/socket/handlers.js
+// export function registerSocketHandlers(io) {
+//     io.on("connection", (socket) => {
+//         socket.on("join", (userId) => {
+//             socket.join(`user:${userId}`);
+//         });
+//     });
+// }
