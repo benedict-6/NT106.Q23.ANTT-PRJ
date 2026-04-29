@@ -1,0 +1,6 @@
+{
+  "name": "Team2 monitor dashboard",
+  "description": "A high-fidelity security operations center (SOC) dashboard featuring real-time log monitoring, agent status, and event visualization in a modern dark mode interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
