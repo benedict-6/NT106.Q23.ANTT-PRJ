@@ -10,6 +10,7 @@ const { Pool } = pkg;
 
 // Create a new pool instance
 const pool = new Pool({
+
   user: process.env.DB_USER || "team2",
   host: process.env.DB_HOST || "localhost",
   database: process.env.DB_NAME || "monitoringDB",
