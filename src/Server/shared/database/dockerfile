@@ -1,3 +1,0 @@
-FROM timescale/timescaledb:latest-pg16
-
-COPY ./init /docker-entrypoint-initdb.d/

@@ -7,3 +7,4 @@ build/
 data/
 src/Server/node_modules/
 src/agents/socket_debug.go
+.env

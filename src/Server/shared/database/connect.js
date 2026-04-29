@@ -3,20 +3,18 @@
 import path from "path";
 import dotenv from "dotenv";
 dotenv.config({
-  path: path.resolve("shared/database/.env")
+  path: path.resolve('../../../../.env')
 });
-
-
 
 import pkg from "pg";
 const { Pool } = pkg;
 
 // Create a new pool instance
 const pool = new Pool({
-  user: process.env.POSTGRES_USER || "postgres",
+  user: process.env.DB_USER || "team2",
   host: process.env.DB_HOST || "localhost",
-  database: process.env.POSTGRES_DB || "your_db",
-  password: process.env.POSTGRES_PASSWORD,
+  database: process.env.DB_NAME || "monitoringDB",
+  password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 5432,
 
   // optional configs
