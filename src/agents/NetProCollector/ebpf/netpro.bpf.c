@@ -138,8 +138,6 @@ int BPF_KPROBE(udp_recv, struct sock *sk, struct msghdr *msg, size_t len, int no
 
 // ---------------- PROCESS HOOKS ----------------
 
-// ---------------- PROCESS HOOKS ----------------
-
 // Using tracepoints for process lifecycle events as requested
 // Tracepoints provide stable and reliable event hooking.
 

@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -98,6 +99,29 @@ func sendEventToAgent(conn net.Conn, event FimEvent) error {
 	data = append(data, '\n')
 	_, err = conn.Write(data)
 	return err
+}
+
+var lastEvent = make(map[string]time.Time)
+
+func shouldProcess(path string) bool {
+	now := time.Now()
+
+	if t, ok := lastEvent[path]; ok {
+		if now.Sub(t) < 500*time.Millisecond {
+			return false
+		}
+	}
+
+	lastEvent[path] = now
+	return true
+}
+
+func isNoise(path string) bool {
+	return strings.HasSuffix(path, ".N") ||
+		strings.HasSuffix(path, ".tmp") ||
+		strings.Contains(path, "cups") ||
+		strings.Contains(path, "systemd") ||
+		strings.Contains(path, "apt")
 }
 
 func main() {
@@ -213,6 +237,16 @@ func main() {
 						metadata := make(map[string]interface{})
 						metadata["file"] = fullPath
 						metadata["event"] = eventType
+						now := time.Now().UTC()
+
+						metadata["timestamp"] = now.Format(time.RFC3339)
+
+						info, _ := os.Stat(fullPath)
+						metadata["mtime"] = info.ModTime().UTC().Format(time.RFC3339)
+
+						if isNoise(fullPath) || !shouldProcess(fullPath) {
+							continue
+						}
 
 						baselineMutex.Lock()
 						oldMeta, exists := baseline[fullPath]
@@ -225,9 +259,10 @@ func main() {
 						} else {
 							// Tính toán metadata và hash mới chỉ cho file thay đổi
 							newMeta, err := getFileMetadata(fullPath)
+							t := time.Unix(newMeta.Mtime, 0)
 							if err == nil {
 								metadata["size"] = newMeta.Size
-								metadata["mtime"] = newMeta.Mtime
+								metadata["timestamp"] = t.UTC().Format(time.RFC3339)
 								metadata["uid"] = newMeta.Uid
 								metadata["gid"] = newMeta.Gid
 								metadata["mode"] = newMeta.Mode
