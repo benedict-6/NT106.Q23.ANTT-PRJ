@@ -1,4 +1,4 @@
-// Mock data to match the visual
+// Fake data for testing & illustrating
 export const topAgentsData = [
   { name: 'DL1224LINUX02', value: 450, color: '#882D30' },
   { name: 'ubuntu-sam47', value: 120, color: '#3E769D' },
@@ -72,5 +72,28 @@ export const mockData = {
   file_logs: [
     { agent_id: '8f2a-b1c3', file_path: '/etc/nginx/nginx.conf', change_type: 'Modified', permission: 'Read/Write', created_at: '2024-04-29 09:12' },
     { agent_id: '4d1e-f4a1', file_path: '/var/www/html/index.php', change_type: 'Created', permission: 'Read', created_at: '2024-04-29 08:45' },
+    { agent_id: '4d1e-f4a1', file_path: '/root/conf', change_type: 'Deleted', permission: 'Read/Write/Execute', created_at: '2024-04-28 08:40' },
+  ],
+  warning: [
+    { rule_id: '001', 
+      description: 'Suspicious outbound connection on uncommon port 4444 (possible reverse shell)', 
+      target_type: 'port', target_value: '4444', priority_level: 'critical', created_by: 'system'
+    },
+    { rule_id: '002', 
+      description: 'High-risk process execution detected: nc (netcat) often used for backdoor communication', 
+      target_type: 'process', target_value: 'nc', priority_level: 'critical', created_by: 'system'
+    },
+    { rule_id: '003', 
+      description: 'Connection to known malicious IP address detected', 
+      target_type: 'network', target_value: '185.220.101.45', priority_level: 'critical', created_by: 'monitor-team2'
+    },
+    { rule_id: '004', 
+      description: 'Execution of privilege escalation tool: mimikatz', 
+      target_type: 'process', target_value: 'mimikatz.exe', priority_level: 'critical', created_by: 'monitor-team2'
+    },
+    { rule_id: '005', 
+      description: 'Multiple connections detected on port 3389 (possible brute force RDP attack)', 
+      target_type: 'port', target_value: '3389', priority_level: 'critical', created_by: 'system'
+    },
   ]
 };

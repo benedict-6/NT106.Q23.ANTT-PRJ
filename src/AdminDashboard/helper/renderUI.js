@@ -18,7 +18,7 @@ export const DashboardCard = ({ title, children, className = "", icon = null }) 
         <h3 className="text-base font-bold text-gray-300 uppercase tracking-wide">{title}</h3>
         <div className="flex items-center space-x-2">{icon}</div>
       </div>
-      <div className="flex-1 min-h-0">{children}</div>
+      <div className="flex-1 min-h-0 flex flex-col">{children}</div>
       <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-[#444] opacity-0 group-hover:opacity-100 transition-opacity"></div>
       <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-[#444] opacity-0 group-hover:opacity-100 transition-opacity"></div>
     </div>
@@ -49,7 +49,7 @@ export const TabItem = ({ active, onClick, icon, label }) => {
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center space-x-2 px-4 py-1 rounded transition-all text-base font-bold uppercase tracking-widest ${
+      className={`flex items-center space-x-2 px-4 py-1 rounded transition-all text-base font-bold uppercase tracking-tight ${
         active 
           ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
           : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
@@ -70,7 +70,7 @@ export const Table = ({ children }) => {
 export const THead = ({ columns }) => {
   return (
     <thead>
-      <tr className="border-b border-[#2A2A2A] text-[#1d4ed8] text-base uppercase font-bold tracking-wide">
+      <tr className="border-b border-[#2A2A2A] text-[#1d4ed8] text-base uppercase font-bold tracking-tighter">
         {columns.map((c, i) => (
           <th key={i} className={`py-4 ${i === 0 ? 'px-4' : ''} ${i === columns.length - 1 ? 'text-left px-5' : ''}`}>{c}</th>
         ))}

@@ -43,7 +43,7 @@ export const Top5PercentBarChart = ({ data }) => {
           />
           <YAxis hide />
           <Tooltip formatter={(value) => `${value}%`} />
-          <Bar dataKey="percent" shape={renderCustomBar} barSize={60} maxBarSize={70} />
+          <Bar dataKey="percent" shape={renderCustomBar} barSize={60} maxBarSize={70} animationDuration={650} />
         </BarChart>
       </ResponsiveContainer>
     </div>

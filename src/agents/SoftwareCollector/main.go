@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"net"
 	"os/exec"
@@ -9,6 +10,33 @@ import (
 )
 
 const socketPath = "/tmp/agent_queue.sock"
+
+type Event struct {
+	Type     string                 `json:"type"`
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
+func parsePackages(raw string) []map[string]string {
+	lines := bytes.Split([]byte(raw), []byte("\n"))
+
+	var result []map[string]string
+
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var pkg map[string]string
+		err := json.Unmarshal(line, &pkg)
+		if err != nil {
+			continue
+		}
+
+		result = append(result, pkg)
+	}
+
+	return result
+}
 
 func main() {
 	var conn net.Conn
@@ -28,7 +56,7 @@ func main() {
 
 	for {
 		// Use dpkg-query to list packages
-		cmd := exec.Command("sh", "-c", "dpkg-query -W -f='{\"name\": \"${binary:Package}\", \"version\": \"${Version}\"},'")
+		cmd := exec.Command("sh", "-c", `dpkg-query -W -f='{"name":"${binary:Package}","version":"${Version}"}\n'`)
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		err := cmd.Run()
@@ -36,17 +64,19 @@ func main() {
 		if err != nil {
 			log.Printf("SoftwareCollector: dpkg-query failed: %v", err)
 		} else {
-			packages := out.String()
-			// Remove trailing comma
-			if len(packages) > 0 && packages[len(packages)-1] == ',' {
-				packages = packages[:len(packages)-1]
+			packages := parsePackages(out.String())
+
+			event := Event{
+				Type: "software_list",
+				Metadata: map[string]interface{}{
+					"packages": packages,
+				},
 			}
 
-			// Since the output is a comma-separated string of JSON objects, we can construct the JSON string directly
-			// or parse it. For simplicity and to match the C++ version, we construct it directly.
-			payloadStr := `{"type": "software_list", "metadata": {"packages": [` + packages + `]}}` + "\n"
+			data, _ := json.Marshal(event)
+			data = append(data, '\n')
 
-			_, err = conn.Write([]byte(payloadStr))
+			_, err = conn.Write(data)
 			if err != nil {
 				log.Printf("SoftwareCollector: Send failed: %v", err)
 				break

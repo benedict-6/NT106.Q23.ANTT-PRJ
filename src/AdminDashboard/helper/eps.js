@@ -73,7 +73,7 @@ export const drawEPS = (value = 0, max = 1) => {
   const data = buildGaugeData(value, max);
 
   return (
-    <div className="relative flex h-[320px] w-full items-center justify-center">
+    <div className="relative flex h-[350px] w-full items-center justify-center">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

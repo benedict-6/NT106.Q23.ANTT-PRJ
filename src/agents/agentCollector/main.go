@@ -24,7 +24,7 @@ import (
 const (
 	socketPath    = "/tmp/agent_queue.sock" // Keep socket in local folder or /tmp
 	serverBaseURL = "http://localhost:3000"
-	secretKey     = "supersecretkey1234567890123456" // Used for AES payload encryption
+	secretKey     = "aenhom8maidinh" // Used for AES payload encryption
 	configPath    = "./agent_metadata.json"
 )
 

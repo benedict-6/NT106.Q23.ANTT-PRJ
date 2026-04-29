@@ -14,7 +14,7 @@ export const drawPie = (data) => {
           data={data}
           dataKey="value"
           nameKey="name"
-          outerRadius={80}
+          outerRadius={100}
           shape={CustomSector}
         />
         <Tooltip

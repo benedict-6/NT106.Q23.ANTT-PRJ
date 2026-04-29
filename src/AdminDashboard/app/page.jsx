@@ -43,18 +43,17 @@ export default function Dashboard() {
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">
       {/* Sidebar - Mini rail */}
       <SideBar handleFunc={handleLogout}/>      
-
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <AppHeader route={"dashboard"}/>        
         {/* Dashboard Grid */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-8 bg-[#0A0A0A]">
+        <div className="flex-1 overflow-y-auto p-4 space-y-9 bg-[#0A0A0A]">
           {/* Top Row: Gauge, Pie, Location Legend */}
-          <div className="grid grid-cols-12 gap-4 h-[300px]">
+          <div className="grid grid-cols-12 gap-2 h-[300px]">
             {/* EPS Gauge */}
             <DashboardCard title="EPS Count" className="col-span-3 overflow-hidden">
-               <div className="flex flex-col items-center justify-center h-full relative pt-2">
+               <div className="flex flex-col items-center justify-center h-full relative pointer-events-none">
                   {drawEPS(0.8)}
                   <span className="text-lg text-secondary opacity-60">Overall Average of Count</span>
                </div>
@@ -63,7 +62,7 @@ export default function Dashboard() {
             {/* Top 3 Agents Pie */}
             <DashboardCard title="Top 3 Agents by Log Count" className="col-span-4">
               <div className="w-full flex items-center h-64">
-                  <div className="w-[70%] h-full min-w-0">
+                  <div className="w-[70%] h-full min-w-0 pointer-events-none">
                     {drawPie(topAgentsData)}
                   </div>
                 <div className="space-y-2 pr-4">
@@ -95,9 +94,9 @@ export default function Dashboard() {
           </div>
 
           {/* Middle Row: Critical Events, Disconnected, High Events */}
-          <div className="grid grid-cols-12 gap-4 flex-1 min-h-[250px]">
+          <div className="grid grid-cols-12 gap-2 flex-1 min-h-[250px]">
             {/* Critical Events Table */}
-            <DashboardCard title="Critical Events" className="col-span-5 flex flex-col" icon={<Download size={14} className="text-blue-400"/>}>
+            <DashboardCard title="Critical Events" className="col-span-5 flex flex-col">
               <div className="flex-1 overflow-hidden mt-4">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -122,7 +121,7 @@ export default function Dashboard() {
 
             {/* Agent Stats */}
             <div className="col-span-2 flex flex-col gap-4">
-              <DashboardCard title="Disconnected Agents" className="flex-1 flex flex-col items-center">
+              <DashboardCard title="Disconnected Agents" className="flex flex-col items-center justify-center text-center">
                 <div className='flex flex-col items-center justify-center mt-4'>
                   <span className="text-7xl font-bold text-[#e11d48] mb-2">0</span>
                   <span className="text-base text-gray-500">Disconnected Agents</span>
@@ -137,7 +136,7 @@ export default function Dashboard() {
             </div>
 
             {/* High Events Table */}
-            <DashboardCard title="High Events" className="col-span-5 flex flex-col" icon={<Download size={14} className="text-blue-400" />}>
+            <DashboardCard title="High Events" className="col-span-5 flex flex-col">
                <div className="flex-1 overflow-hidden mt-4">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
