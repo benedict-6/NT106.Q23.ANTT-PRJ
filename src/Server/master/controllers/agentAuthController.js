@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import pool from "../../shared/database/connect.js";
 import { GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
+import jwt from "jsonwebtoken";
 
 
 const agentController = {
@@ -60,7 +61,7 @@ const agentController = {
 
 
             // Sinh Session Token ngẫu nhiên
-            const sessionToken = crypto.randomBytes(32).toString('hex');
+            const sessionToken = jwt.sign({ agent_id: agent.agent_id }, process.env.JWT_SECRET_SESSION_AGENT);
 
             // Lưu Session Token vào DB + cập nhật trạng thái online
             await pool.query(

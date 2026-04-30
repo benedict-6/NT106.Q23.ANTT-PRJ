@@ -9,10 +9,10 @@ import { GCMencrypt, GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
 const dashController = {
 	// Tạo agent mới, gắn user_id từ JWT
 	createAgent: async (req, res) => {
-		const {description} = req.body;
+		const { description } = req.body;
 		const userId = req.user.userId; // Lấy từ JWT middleware
 
-		try{
+		try {
 			// Sinh agent id
 			const randByte = crypto.randomBytes(4).toString('hex');
 			const agentID = `AGT-${randByte.toUpperCase()}`;
@@ -28,7 +28,7 @@ const dashController = {
 			await pool.query(
 				`INSERT INTO agents (agent_id, user_id, secret_key, secret_key_iv, secret_key_auth_tag, agent_description, agent_status)
 				 VALUES ($1, $2, $3, $4, $5, $6, 'Active')`,
-				 [agentID, userId, ciphetobj.cipherText, ciphetobj.iv, ciphetobj.tag, description || 'No Description']
+				[agentID, userId, ciphetobj.cipherText, ciphetobj.iv, ciphetobj.tag, description || 'No Description']
 			);
 
 			//Tra res
@@ -41,9 +41,9 @@ const dashController = {
 				}
 			});
 		}
-		catch(err){
+		catch (err) {
 			console.error('Lỗi khi tạo agent: ', err);
-			res.status(500).json({message: 'Lỗi server khi cấp phát agent'});
+			res.status(500).json({ message: 'Lỗi server khi cấp phát agent' });
 		}
 	},
 
@@ -59,7 +59,7 @@ const dashController = {
 			);
 			res.json({ agents: result.rows });
 		}
-		catch(err) {
+		catch (err) {
 			console.error('Lỗi khi lấy danh sách agents: ', err);
 			res.status(500).json({ message: 'Lỗi server' });
 		}
@@ -96,18 +96,18 @@ const dashController = {
 			}
 
 			// Trả về config JSON để agent dùng
-			const serverUrl = `${req.protocol}://${req.get('host')}`;
 			const config = {
 				agent_id: agent.agent_id,
 				secret_key: rawKey,
-				server_url: serverUrl
+				server_url: SERVER_URL,
+				lb_url: LOAD_BALANCE_URL
 			};
 
 			res.setHeader('Content-Disposition', `attachment; filename="agent_config_${agent_id}.json"`);
 			res.setHeader('Content-Type', 'application/json');
 			res.json(config);
 		}
-		catch(err) {
+		catch (err) {
 			console.error('Lỗi khi tạo config download: ', err);
 			res.status(500).json({ message: 'Lỗi server' });
 		}
