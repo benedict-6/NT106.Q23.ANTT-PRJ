@@ -259,7 +259,11 @@ func sendBatch(batch [][]byte) {
 	}
 
 	// 4. Send to server
+<<<<<<< HEAD
 	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(encrypted))
+=======
+	req, err := http.NewRequest("POST", currentConfig.ServerURL+"/api/agent/upload", bytes.NewReader(encrypted))
+>>>>>>> origin
 	if err != nil {
 		return
 	}
