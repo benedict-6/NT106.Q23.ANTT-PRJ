@@ -3,15 +3,16 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { RotateCcw, ArrowRight, ArrowLeft, Info, Fingerprint, PersonStanding, KeyRound, Sparkles, CircleAlert } from 'lucide-react';
+import { RotateCcw, ArrowRight, ArrowLeft, Fingerprint, PersonStanding, KeyRound, Sparkles, CircleAlert } from 'lucide-react';
 
-import { CustomCheckbox } from '../helper/renderUI.js'
+import { CustomCheckbox, CornerBrackets, InputField, RenderUIPattern } from '../../helper/renderUI.js'
+import { useNavigation } from '../../hooks/useNavigation.js';
 
-export const RegisterPage = ({ onSwitchToLogin }) => {
+const RegisterPage = () => {
   const [step, setStep] = useState(1);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
-  const totalSteps = 2;
+  const { handlePowerOff } = useNavigation();
 
   return (
     <div className="min-h-screen hacker-bg flex flex-col items-center justify-center p-4 relative overflow-hidden font-mono text-blue-500/90">
@@ -20,14 +21,7 @@ export const RegisterPage = ({ onSwitchToLogin }) => {
       <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
            style={{ backgroundImage: 'linear-gradient(#3b82f6 1px, transparent 1px), linear-gradient(90deg, #3b82f6 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
       
-      {/* Background Data Streams */}
-      <div className="absolute top-10 right-10 text-blue-500/10 text-[9px] select-none pointer-events-none text-right hidden lg:block leading-relaxed">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="hover:text-blue-500/40 transition-colors uppercase">
-            {`>> [${new Date().toISOString().split('T')[1].split('.')[0]}] NET_TRACE: #00${i} -- ADDR_0x${Math.random().toString(16).slice(2, 6)} -- OK`}
-          </div>
-        ))}
-      </div>
+      <RenderUIPattern/>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -118,8 +112,8 @@ export const RegisterPage = ({ onSwitchToLogin }) => {
                     </div>
                     <div>
                       <p className="text-[11px] text-gray-500 leading-relaxed uppercase ml-[20px]">
-                          Passwords must be at least 12 characters long and include a combination of uppercase letters, 
-                          lowercase letters, numbers, and special characters.
+                          Passwords must be at least 12 to 28 characters long.  
+                          Include a combination of letters, numbers, and special characters.
                       </p>
                     </div>
                   </div>
@@ -156,14 +150,14 @@ export const RegisterPage = ({ onSwitchToLogin }) => {
         <div className="mt-3 flex flex-col items-center">
           <div className="flex items-center justify-center space-x-6">
             <button 
-              onClick={onSwitchToLogin}
+              onClick={handlePowerOff}
               className="text-[13px] font-bold text-gray-600 tracking-[0.25em] hover:text-blue-400 transition-colors uppercase border-b border-transparent hover:border-blue-400/30 pb-1 cursor-pointer bg-transparent"
             >
               ALREADY HAVE AN ACCOUNT
             </button>
             <div className='flex flex-row items-center justify-center gap-x-2'>
               <Sparkles size={20} color='gray'/>
-              <Link href="/" className="text-[13px] font-bold text-gray-600 tracking-[0.25em] hover:text-blue-400 transition-colors uppercase border-b border-transparent hover:border-blue-400/30 pb-1">
+              <Link href="/guide" className="text-[13px] font-bold text-gray-600 tracking-[0.25em] hover:text-blue-400 transition-colors uppercase border-b border-transparent hover:border-blue-400/30 pb-1">
                 GUIDE
               </Link>
             </div>
@@ -174,48 +168,8 @@ export const RegisterPage = ({ onSwitchToLogin }) => {
   );
 }
 
-const InputField = ({ label, placeholder, icon, type = "text" }) => {
-  return (
-    <div className="space-y-2 group">
-      <div className="flex items-center justify-between">
-        <label className="font-extrabold text-[18px] uppercase tracking-tight text-blue-500 group-focus-within:text-blue-400 transition-colors leading-none">
-          {label}
-        </label>
-      </div>
-      <div className="relative">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">
-            {icon}
-          </div>
-        )}
-        <input 
-          type={type} 
-          placeholder={placeholder}
-          className={`w-full bg-black/50 border border-blue-500/40 hover:border-blue-500/40 focus:border-blue-500 focus:bg-blue-500/5 transition-all text-sm py-3.5 ${icon ? 'pl-11' : 'px-4'} pr-4 text-blue-100 placeholder:text-blue-900/30 focus:outline-none focus:ring-1 focus:ring-blue-500/10 rounded-none`}
-          required
-          autoComplete='off'
-          maxLength={21}
-        />
-        {/* Bottom animated bar */}
-        <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-blue-500 group-focus-within:w-full transition-all duration-500" />
-      </div>
-    </div>
-  );
-}
+export default RegisterPage;
 
-const CornerBrackets = () => {
-  return (
-    <>
-      <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-blue-500 pointer-events-none opacity-40" />
-      <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-blue-500 pointer-events-none opacity-40" />
-      <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-blue-500 pointer-events-none opacity-40" />
-      <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-blue-500 pointer-events-none opacity-40" />
-      {/* Decorative dots */}
-      <div className="absolute top-2 left-2 w-1 h-1 bg-blue-500/30 rounded-full" />
-      <div className="absolute top-2 right-2 w-1 h-1 bg-blue-500/30 rounded-full" />
-      <div className="absolute bottom-2 left-2 w-1 h-1 bg-blue-500/30 rounded-full" />
-      <div className="absolute bottom-2 right-2 w-1 h-1 bg-blue-500/30 rounded-full" />
-    </>
-  );
-}
+
+
 

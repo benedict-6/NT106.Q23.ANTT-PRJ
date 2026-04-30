@@ -8,29 +8,21 @@ import { spider } from '@lucide/lab';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGithub, faDiscord } from '@fortawesome/free-brands-svg-icons';
 
-import { RegisterPage } from './register.jsx'
+import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
+import { useNavigation } from '../../hooks/useNavigation.js';
 
-export const LoginPage = () => {
-    const [showRegister, setShowRegister] = useState(false);
-    const handleShowRegister = () => { setShowRegister(true); }
-    const handleShowLogin = () => { setShowRegister(false); }
+const LoginPage = () => {
+    const { handleDashboardClick, handleRegister } = useNavigation();
     
     const handleLogin = () => {
         // Handle Auth logic
     };
 
-    if(showRegister) return <RegisterPage onSwitchToLogin={handleShowLogin} />;
-
     return (
         <div className="min-h-screen hacker-bg flex flex-col items-center justify-center p-4 relative overflow-hidden font-mono">
         <div className="scanline" />
-
-        <div className="absolute top-10 left-10 text-[blue]/5 text-[10px] select-none pointer-events-none hidden lg:block">
-            {Array.from({ length: 20 }).map((_, i) => (
-            <div key={i}>0x{Math.random().toString(16).slice(2, 10).toUpperCase()} ACCESS_GRANTED</div>
-            ))}
-        </div>
-
+        
+        <RenderUIPattern/>
         <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -115,24 +107,17 @@ export const LoginPage = () => {
             <div className="mt-3 flex flex-col items-center space-y-4">
             <p className="text-base text-gray-600 tracking-wider">
                 FIRST-TIMER ?{' '}
-                <button onClick={handleShowRegister} className="text-blue-600 font-bold hover:text-blue-400 hover:underline cursor-pointer bg-transparent">JOIN OUR FORCES</button>
+                <button onClick={handleRegister} className="text-blue-600 font-bold hover:text-blue-400 hover:underline cursor-pointer bg-transparent">JOIN OUR FORCES</button>
             </p>
             
-            <Link href="/" className="inline-flex items-center space-x-2 text-[12px] text-blue-500/40 hover:text-blue-500 transition-colors border border-blue-500/20 px-3 py-1.5 rounded-full uppercase tracking-tighter">
+            <button onClick={handleDashboardClick} className="inline-flex items-center space-x-2 text-[12px] text-blue-500/40 hover:text-blue-500 transition-colors border border-blue-500/20 px-3 py-1.5 rounded-full uppercase tracking-tighter">
                 <Icon iconNode={spider} size={22}/>
                 <span>demo bypass_auth</span>
-            </Link>
+            </button>
             </div>
         </motion.div>
         </div>
     );
 }
 
-const HackerButton = ({ icon, label }) => {
-  return (
-    <button className="flex items-center justify-center space-x-2 bg-transparent border border-blue-500/20 hover:border-blue-500/60 hover:bg-blue-500/5 hover:text-[#3b82f6] text-blue-500/70 py-3 rounded-none transition-all font-bold text-[14px] tracking-widest">
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
+export default LoginPage;
