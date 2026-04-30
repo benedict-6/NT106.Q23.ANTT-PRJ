@@ -1,10 +1,6 @@
 // ---> CODE CHUNG DÙNG CHO CẢ MASTER VÀ WORKER
 // Khởi tạo pool kết nối CSDL (Mongo/Postgres/Elasticsearch)
-import dotenv from "dotenv";
-dotenv.config({
-  path: path.resolve('../../../../.env')
-});
-
+import { DB_config } from "../config/index.js";
 import pkg from "pg";
 const { Pool } = pkg;
 
