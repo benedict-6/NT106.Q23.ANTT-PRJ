@@ -31,9 +31,10 @@ const (
 
 // Config được sinh từ Server khi user download agent
 type AgentConfig struct {
-	AgentID   string `json:"agent_id"`
-	SecretKey string `json:"secret_key"`
-	ServerURL string `json:"server_url"`
+	AgentID        string `json:"agent_id"`
+	SecretKey      string `json:"secret_key"`
+	ServerURL      string `json:"server_url"`
+	LoadBalanceURL string `json:"lb_url"`
 	// Runtime only — không lưu file
 	SessionToken string `json:"-"`
 }
@@ -258,7 +259,11 @@ func sendBatch(batch [][]byte) {
 	}
 
 	// 4. Send to server
+<<<<<<< HEAD
+	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(encrypted))
+=======
 	req, err := http.NewRequest("POST", currentConfig.ServerURL+"/api/agent/upload", bytes.NewReader(encrypted))
+>>>>>>> origin
 	if err != nil {
 		return
 	}
@@ -269,7 +274,7 @@ func sendBatch(batch [][]byte) {
 	// Thêm Session Token vào Header để xác thực
 	token := currentConfig.SessionToken
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("authorization", "Bearer "+token)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
