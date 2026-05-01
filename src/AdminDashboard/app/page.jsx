@@ -11,7 +11,6 @@ import { DashboardCard } from '../helper/renderUI.js';
 import { Top5PercentBarChart } from '../chart/bar.js';
 import { processedEventLocationData } from '../helper/support.js';
 
-import { LoginPage } from './login.jsx';
 import { SideBar } from '../components/sidebar.jsx';
 import { AppHeader } from '../components/header.jsx';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Wifi, ExternalLink, FileText, Terminal as TerminalIcon, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -15,26 +15,27 @@ import { AlertCard } from '../../components/warning.jsx'
 export default function AdminFleetView() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('users');
+  // Future Plan feature
   const [search, setSearch] = useState('');
   const [appHeader, setAppHeader] = useState('security');
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">
-      <SideBar handleFunc={() => router.push('/')} />
+      <SideBar/>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AppHeader route={appHeader}/>
 
         {/* Tab Navigation Rail */}
-        <div className="bg-[#111111] border-b border-[#2A2A2A] px-6 py-2 flex items-center space-x-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-          <TabItem active={activeTab === 'users'}   onClick={() => {setActiveTab('users'),   setAppHeader('security/user')}} icon={<Users size={16} />}        label="Identity" />
-          <TabItem active={activeTab === 'apps'}    onClick={() => {setActiveTab('apps'),    setAppHeader('security/apps')}} icon={<Apple size={16} />}        label="Application" />
-          <TabItem active={activeTab === 'process'} onClick={() => {setActiveTab('process'), setAppHeader('security/proc')}} icon={<TerminalIcon size={16} />} label="Process" />
-          <TabItem active={activeTab === 'network'} onClick={() => {setActiveTab('network'), setAppHeader('security/nets')}} icon={<Wifi size={16} />}         label="Network Log" />
-          <TabItem active={activeTab === 'file'}    onClick={() => {setActiveTab('file'),    setAppHeader('security/file')}} icon={<FileText size={16} />}     label="File Log" />
+        <div className="bg-[#111111] border-b border-[#2A2A2A] px-6 py-3 flex items-center space-x-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
+          <TabItem active={activeTab === 'users'}   onClick={() => {setActiveTab('users');   setAppHeader('security/user')}} icon={<Users size={16} />}        label="Identity" />
+          <TabItem active={activeTab === 'apps'}    onClick={() => {setActiveTab('apps');    setAppHeader('security/apps')}} icon={<Apple size={16} />}        label="Application" />
+          <TabItem active={activeTab === 'process'} onClick={() => {setActiveTab('process'); setAppHeader('security/proc')}} icon={<TerminalIcon size={16} />} label="Process" />
+          <TabItem active={activeTab === 'network'} onClick={() => {setActiveTab('network'); setAppHeader('security/nets')}} icon={<Wifi size={16} />}         label="Network Log" />
+          <TabItem active={activeTab === 'file'}    onClick={() => {setActiveTab('file');    setAppHeader('security/file')}} icon={<FileText size={16} />}     label="File Log" />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#0A0A0A] relative">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#0A0A0A] relative">
           <div className="scanline opacity-20" />
           <AnimatePresence mode="wait">
             {/* IDENTITY TABLE */}
@@ -56,7 +57,7 @@ export default function AdminFleetView() {
                           <td className="py-3 px-0">
                             <div className="flex items-center space-x-2 text-[#bfdbfe]">{user.hash}</div>
                           </td>
-                          <td className="py-3 px-4 text-base text-gray-500">{user.created_at}</td>
+                          <td className="py-3 px-5 text-base text-gray-500">{user.created_at}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -77,7 +78,7 @@ export default function AdminFleetView() {
                           <td className="py-3 px-4 text-white-500">{app.app_id}</td>
                           <td className="py-3 text-[#14b8a6]">{app.agent_id}</td>
                           <td className="py-3 font-bold">{app.software_name}</td>
-                          <td className="py-3 px-4 text-gray-400">{app.version}</td>
+                          <td className="py-3 px-6 text-gray-400">{app.version}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -102,7 +103,7 @@ export default function AdminFleetView() {
                           {log.user === "user" && <td className="py-3 text-[#ddd6fe] uppercase font-bold">{log.user}</td>}
                           <td className="py-3 text-[#34d399] uppercase">{log.status}</td>
                           <td className="py-3 text-[#bfdbfe]">{log.cmd_line}</td>
-                          <td className="py-3 px-4 text-gray-600 truncate">{log.created_at || '???'}</td>
+                          <td className="py-3 px-5 text-gray-600 truncate">{log.created_at || '???'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -127,7 +128,7 @@ export default function AdminFleetView() {
                           <td className="py-3 text-[#ec4899] uppercase">{log.dest_port}</td>
                           <td className="py-3 text-[#60a5fa] uppercase">{log.protocol}</td>
                           <td className="py-3 text-white-500 uppercase">{log.connection_cnt}</td>
-                          <td className="py-3 px-4 text-gray-500 uppercase">{log.created_at || '???'}</td>
+                          <td className="py-3 px-5 text-gray-500 uppercase">{log.created_at || '???'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -157,9 +158,9 @@ export default function AdminFleetView() {
                           <td className="py-3 text-white-500">{log.old_hash || "*******"}</td>
                           <td className="py-3 text-white-600">{log.new_hash || "*******"}</td>
                           <td className="py-3 text-[#e11d48]">{log.permission}</td>
-                          <td className="py-3 px-4 text-gray-600">{log.created_at || "???"}</td>
+                          <td className="py-3 px-5 text-gray-600">{log.created_at || "???"}</td>
                           <td className="py-3 text-right">
-                            <button onClick={() => router.push(`/detail-log?id=${i}`)}
+                            <button onClick={() => router.push(`/log?id=${i}`)}
                                     className="bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95">
                               <ExternalLink size={14} />
                               <span>Detail</span>
@@ -173,6 +174,7 @@ export default function AdminFleetView() {
               </motion.div>
             )}
           </AnimatePresence>
+          {/* ALERT CARD AT THE BOTTOM */}
           <AlertCard/>
         </div>
       </main>

@@ -7,4 +7,7 @@ export const headerTitle = [
     {route: "security/proc" , title: ["Security", "List current processes"]},
     {route: "security/nets" , title: ["Security", "List network logs"]},
     {route: "security/file" , title: ["Security", "List file logs"]},
+    {route: "service/worker", title: ["Services", "List available servers & agents"]},
+    {route: "account"       , title: ["Account", "User info"]},
+    {route: "diary"         , title: ["Logs", "List log history"]},
 ]
