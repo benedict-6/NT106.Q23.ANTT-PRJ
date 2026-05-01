@@ -94,7 +94,7 @@ export const CornerBrackets = () => {
   );
 }
 
-export const InputField = ({ label, placeholder, icon, type = "text" }) => {
+export const InputField = ({ label, placeholder, icon, type = "text", value, onChange }) => {
   return (
     <div className="space-y-2 group">
       <div className="flex items-center justify-between">
@@ -105,6 +105,8 @@ export const InputField = ({ label, placeholder, icon, type = "text" }) => {
         <input 
           type={type} 
           placeholder={placeholder}
+          value={value}      
+          onChange={onChange} 
           className={`w-full bg-black/50 border border-blue-500/40 hover:border-blue-500/40 focus:border-blue-500 focus:bg-blue-500/5 transition-all text-sm py-3.5 ${icon ? 'pl-11' : 'px-4'} pr-4 text-blue-100 placeholder:text-blue-900/30 focus:outline-none focus:ring-1 focus:ring-blue-500/10 rounded-none`}
           required
           autoComplete='off'

@@ -16,17 +16,42 @@ import { AppHeader } from '../components/header.jsx';
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const router = useRouter();
   const processedELData = processedEventLocationData(eventLocationData);
+
+  // 1. SỬA LẠI HÀM LOGOUT
   const handleLogout = () => {
-      // Implement logic handle JWT & session
-      setShowLogin(true);
+      // Xóa thẻ bài khỏi túi
+      localStorage.removeItem('token');
+      // Đá về trang đăng nhập
+      router.push('/login');
   }
 
+  // 2. GẮN KHIÊN BẢO VỆ ROUTE GUARD
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      router.push('/login');
+    } else {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64));
+        const role = payload._role || payload.role;
+
+        // Nếu là Admin mà lỡ vào trang Dashboard của Viewer
+        if (role === 'admin') {
+          router.push('/admin');
+        } else {
+          setMounted(true); // Viewer thì ở lại đây xem Dashboard
+        }
+      } catch (e) {
+        setMounted(true);
+      }
+    }
+  }, [router]);
+
 
   if (!mounted) {
     return (
@@ -35,8 +60,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  if(showLogin) return <LoginPage/>;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Wifi, ExternalLink, FileText, Terminal as TerminalIcon, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,6 +18,32 @@ export default function AdminFleetView() {
   // Future Plan feature
   const [search, setSearch] = useState('');
   const [appHeader, setAppHeader] = useState('security');
+
+  useEffect(() => {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+          router.push('/login');
+          return; 
+      }
+
+      try {
+          // Giải mã Token để đọc thông tin bên trong
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(atob(base64));
+
+          // Kiểm tra xem có phải Admin không 
+          if (payload._role !== 'admin' && payload.role !== 'admin') {
+              alert("BẠN KHÔNG CÓ QUYỀN TRUY CẬP VÀO KHU VỰC QUẢN TRỊ!");
+              router.push('/'); 
+          }
+      } catch (error) {
+          console.error("Token bị lỗi hoặc bị ai đó sửa:", error);
+          localStorage.removeItem('token');
+          router.push('/login');
+      }
+  }, [router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">

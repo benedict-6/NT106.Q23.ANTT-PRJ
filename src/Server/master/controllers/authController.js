@@ -61,7 +61,10 @@ const authController = {
                 return res.status(400).json({message: 'Invalid email or password' }); // Password does not match
             }
 
-            const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: '8h'});
+            const token = jwt.sign({ 
+                userId: user.user_id, 
+                _role: user._role
+            }, process.env.JWT_SECRET, { expiresIn: '8h'});
             res.json({ token, userId: user.user_id });
         }
         catch (err)

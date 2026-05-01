@@ -1,5 +1,5 @@
 'use client';
-
+import { useRouter } from 'next/navigation';
 import React, {useState} from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
@@ -12,10 +12,70 @@ import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
 import { useNavigation } from '../../hooks/useNavigation.js';
 
 const LoginPage = () => {
-    const { handleDashboardClick, handleRegister } = useNavigation();
+    const { handleDashboardClick, handleRegister, handleShieldClick } = useNavigation();
+    const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     
-    const handleLogin = () => {
-        // Handle Auth logic
+    const handleLogin = async (e) => {
+      e.preventDefault();
+      setErrorMsg('');
+      setIsLoading(true);
+
+      try {
+          console.log("[1] Bắt đầu gửi dữ liệu Đăng nhập...");
+          
+          const response = await fetch('http://localhost:5000/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  user_email: email, 
+                  password: password 
+              }),
+          });
+
+          console.log("[2] Server đã phản hồi! Trạng thái HTTP:", response.status);
+          
+          const data = await response.json();
+          console.log("[3] Dữ liệu Server trả về:", data);
+
+          if (response.ok) {
+              if (!data.token) {
+                  setErrorMsg('Lỗi: Server báo thành công nhưng không đưa Token!');
+                  return;
+              }
+
+              localStorage.setItem('token', data.token);
+              
+              try {
+                  const base64Url = data.token.split('.')[1];
+                  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                  const payload = JSON.parse(atob(base64));
+                  console.log("[4] Giải mã Token thành công:", payload);
+
+                  const role = payload._role || payload.role;
+
+                  if (role === 'admin') {
+                      router.push('/admin');
+                  } else {
+                      router.push('/');
+                  }
+              } catch (decodeError) {
+                  console.error("Lỗi giải mã token:", decodeError);
+                  router.push('/'); 
+              }
+          } else {
+              setErrorMsg(data.message || 'Đăng nhập thất bại!');
+          }
+        } catch (error) {
+          console.error("Lỗi mạng (Network Error):", error);
+          setErrorMsg('Không thể kết nối đến máy chủ. (Server có đang bật không?)');
+        } finally {
+            setIsLoading(false);
+            console.log("[5] Hoàn tất vòng lặp!");
+        }
     };
 
     return (
@@ -45,7 +105,7 @@ const LoginPage = () => {
             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-500/50" />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-500/50" />
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleLogin}>
                 <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-[17px] uppercase tracking-tight font-bold text-blue-500">USERNAME</label>
@@ -55,7 +115,9 @@ const LoginPage = () => {
                         <Drama size={22} />
                     </div>
                     <input 
-                    type="text" 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="IDENTIFY WHO YOU ARE"
                     autoComplete="off"
                     className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-11 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base uppercase"
@@ -73,6 +135,8 @@ const LoginPage = () => {
                     </div>
                     <input 
                     type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="PROVE WHO YOU ARE"
                     autoComplete="new-password"
                     className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-11 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base"

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    _role TEXT NOT NULL DEFAULT 'admin' CHECK (_role IN ('admin', 'viewer')),
+    _role TEXT NOT NULL DEFAULT 'viewer' CHECK (_role IN ('admin', 'viewer')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
