@@ -11,6 +11,7 @@ import { AppHeader } from '../../components/header.jsx';
 import { DashboardCard } from '../../helper/renderUI.js';
 import { TabItem, Table, THead } from '../../helper/renderUI.js';
 import { AlertCard } from '../../components/warning.jsx'
+import { io } from "socket.io-client";
 
 export default function AdminFleetView() {
   const router = useRouter();
@@ -38,6 +39,25 @@ export default function AdminFleetView() {
               alert("BẠN KHÔNG CÓ QUYỀN TRUY CẬP VÀO KHU VỰC QUẢN TRỊ!");
               router.push('/'); 
           }
+
+          // ==========================================
+          // SOCKET PAGE ADMIN
+          // ==========================================
+          const socket = io('http://localhost:5000/ui', { 
+              auth: { token: token } 
+          });
+
+          socket.on("connect", () => {
+              console.log("🟢 [Admin UI] Đã kết nối Socket!");
+          });
+
+          socket.on("connect_error", (err) => {
+              console.error("🔴 [Admin UI] Lỗi Socket:", err.message);
+          });
+
+          return () => {
+              socket.disconnect();
+          };
       } catch (error) {
           console.error("Token bị lỗi hoặc bị ai đó sửa:", error);
           localStorage.removeItem('token');

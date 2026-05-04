@@ -13,6 +13,7 @@ import { processedEventLocationData } from '../helper/support.js';
 
 import { SideBar } from '../components/sidebar.jsx';
 import { AppHeader } from '../components/header.jsx';
+import { io } from "socket.io-client";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -40,11 +41,31 @@ export default function Dashboard() {
         const payload = JSON.parse(atob(base64));
         const role = payload._role || payload.role;
 
-        // Nếu là Admin mà lỡ vào trang Dashboard của Viewer
         if (role === 'admin') {
           router.push('/admin');
         } else {
-          setMounted(true); // Viewer thì ở lại đây xem Dashboard
+          setMounted(true); 
+
+          // ==========================================
+          // KẾT NỐI SOCKET VIEWER
+          // ==========================================
+          const socket = io('http://localhost:5000/ui', { 
+              auth: {
+                  token: token 
+              }
+          });
+
+          socket.on("connect", () => {
+              console.log("🟢 [UI] Đã kết nối Socket bảo mật với Master Server!");
+          });
+
+          socket.on("connect_error", (err) => {
+              console.error("🔴 [UI] Lỗi Socket:", err.message);
+          });
+
+          return () => {
+              socket.disconnect();
+          };
         }
       } catch (e) {
         setMounted(true);
