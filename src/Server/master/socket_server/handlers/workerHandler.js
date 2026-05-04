@@ -1,5 +1,5 @@
-import { updateLastActive } from "../../services/agentService.js";
-import { getAllRules } from "../../services/ruleService.js";
+import { updateLastActive } from "../services/agentService.js";
+import { getAllRules } from "../services/ruleService.js";
 
 export function registeWorkerHandlers(io, socket) {
     socket.on("worker:ready", async () => {

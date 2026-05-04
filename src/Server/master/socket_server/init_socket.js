@@ -1,47 +1,59 @@
-// Master đóng vai trò Socket Server để các Worker nối vào
-// Quản lý danh sách worker, đẩy rules xuống worker
 import { Server } from "socket.io";
-
-<<<<<<< HEAD
+import jwt from "jsonwebtoken";
 import { registeWorkerHandlers } from "./handlers/workerHandler.js";
 import { registerUIHandlers } from "./handlers/uiHandler.js";
 
-=======
->>>>>>> origin
 export function initSocket(httpServer) {
     const io = new Server(httpServer, {
-        cors: { origin: "*" }
+        cors: { origin: "http://localhost:3000" } 
     });
-<<<<<<< HEAD
-    // chưa có xác thực UI
-    const workerIo = io.of("/worker"); // url/worker
-    const uiIo = io.of("/ui"); // url/ui
+
+    const workerIo = io.of("/worker"); 
+    const uiIo = io.of("/ui"); 
 
     workerIo.on("connection", (socket) => {
-        console.log("Worker connected");
-
+        console.log("[SOCKET.IO] Worker connected to /worker");
         registeWorkerHandlers(workerIo, socket);
     });
 
+    // ==========================================
+    // QUÉT THẺ CHO KHU VỰC UI
+    // ==========================================
+    uiIo.use((socket, next) => {
+        const token = socket.handshake.auth.token;
+
+        if (!token) {
+            console.log("🔴 [Socket UI] Chặn: Không có Token.");
+            return next(new Error("Authentication error: Missing token"));
+        }
+
+        try {
+            // Kiểm tra token bằng chìa khóa của Server
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            
+            // Lưu thông tin người dùng (userId, _role) vào biến socket
+            socket.user = decoded; 
+            next(); // Xác thực thành công, cho phép vào!
+        } catch (err) {
+            console.log("🔴 [Socket UI] Chặn: Token sai hoặc hết hạn.");
+            return next(new Error("Authentication error: Invalid token"));
+        }
+    });
+
+    // ==========================================
+    // UI ĐÃ QUA CỬA BẢO VỆ THÀNH CÔNG
+    // ==========================================
     uiIo.on("connection", (socket) => {
-        console.log("UI connected");
-
+        // Log ra xem ai đang kết nối (ví dụ: userId)
+        console.log(`🟢 [SOCKET.IO] UI connected to /ui | UserID: ${socket.user.userId}`);
+        
         registerUIHandlers(uiIo, socket);
-=======
-
-    io.on("connection", (socket) => {
-        console.log(`[SOCKET.IO] Client: ${socket.id}`);
-
-        socket.on("join", (userId) => {
-            socket.join(`user:${userId}`);
-            console.log(`[SOCKET.IO] User ${userId} joined`);
-        });
 
         socket.on("disconnect", () => {
-            console.log(`[SOCKET.IO] Disconnect: ${socket.id}`);
+            console.log(`🔴 [SOCKET.IO] UI ngắt kết nối: ${socket.id}`);
         });
->>>>>>> origin
     });
+
 
     return io;
 }

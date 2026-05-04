@@ -1,12 +1,11 @@
-import { Check } from "lucide-react"; 
+import { Check, ChevronRight } from "lucide-react"; 
 
 export const SidebarIcon = ({ icon, active = false, onClick }) => {
   return (
     <div 
       className={`p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-gray-500 hover:text-white hover:bg-[#1A1A1A]'}`}
-      onClick={onClick}
-    >
-      {icon}
+      onClick={onClick}>
+        {icon}
     </div>
   );
 }
@@ -76,5 +75,94 @@ export const THead = ({ columns }) => {
         ))}
       </tr>
     </thead>
+  );
+}
+
+export const CornerBrackets = () => {
+  return (
+    <>
+      <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-blue-500 pointer-events-none opacity-40" />
+      <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-blue-500 pointer-events-none opacity-40" />
+      <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-blue-500 pointer-events-none opacity-40" />
+      <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-blue-500 pointer-events-none opacity-40" />
+      {/* Decorative dots */}
+      <div className="absolute top-2 left-2 w-1 h-1 bg-blue-500/30 rounded-full" />
+      <div className="absolute top-2 right-2 w-1 h-1 bg-blue-500/30 rounded-full" />
+      <div className="absolute bottom-2 left-2 w-1 h-1 bg-blue-500/30 rounded-full" />
+      <div className="absolute bottom-2 right-2 w-1 h-1 bg-blue-500/30 rounded-full" />
+    </>
+  );
+}
+
+export const InputField = ({ label, placeholder, icon, type = "text", value, onChange }) => {
+  return (
+    <div className="space-y-2 group">
+      <div className="flex items-center justify-between">
+        <label className="font-extrabold text-[18px] uppercase tracking-tight text-blue-500 group-focus-within:text-blue-400 transition-colors leading-none">{label}</label>
+      </div>
+      <div className="relative">
+        {icon && (<div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">{icon}</div>)}
+        <input 
+          type={type} 
+          placeholder={placeholder}
+          value={value}      
+          onChange={onChange} 
+          className={`w-full bg-black/50 border border-blue-500/40 hover:border-blue-500/40 focus:border-blue-500 focus:bg-blue-500/5 transition-all text-sm py-3.5 ${icon ? 'pl-11' : 'px-4'} pr-4 text-blue-100 placeholder:text-blue-900/30 focus:outline-none focus:ring-1 focus:ring-blue-500/10 rounded-none`}
+          required
+          autoComplete='off'
+          maxLength={28}
+        />
+        <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-blue-500 group-focus-within:w-full transition-all duration-500" />
+      </div>
+    </div>
+  );
+}
+
+export const HackerButton = ({ icon, label }) => {
+  return (
+    <button className="flex items-center justify-center space-x-2 bg-transparent border border-blue-500/20 hover:border-blue-500/60 hover:bg-blue-500/5 hover:text-[#3b82f6] text-blue-500/70 py-3 rounded-none transition-all font-bold text-[14px] tracking-widest">
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+export const RenderUIPattern = () => {
+    return (
+        <div className="absolute top-10 right-10 text-blue-500/10 text-[9px] select-none pointer-events-none text-right hidden lg:block leading-relaxed">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="hover:text-blue-500/40 transition-colors uppercase">
+            {`>> [${new Date().toISOString().split('T')[1].split('.')[0]}] NET_TRACE: #00${i} -- ADDR_0x${Math.random().toString(16).slice(2, 6)} -- OK`}
+          </div>
+        ))}
+      </div>
+    )
+}
+
+export const CompactRow = ({ label, value}) => {
+  return (
+    <div className="font-mono space-y-1 group flex flex-row gap-x-5 items-center">
+      <div className="flex items-center space-x-2 text-gray-500 group-hover:text-blue-400 transition-colors">
+        <span className="text-base font-bold uppercase tracking-widest">{label}:</span>
+      </div>
+      <div className={`text-base text-gray-300 bg-white/5 px-1 text-align rounded-sm border border-transparent group-hover:border-blue-500/10 transition-all`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+export const LogLine = ({ time, type, msg, glow = true }) => {
+  const colors = {
+    WARNING: 'text-[#fcd34d]',
+    CRITICAL: 'text-red-500',
+  };
+  return (
+    <div className={`flex items-start space-x-3 py-0.5 group ${(glow && type === 'CRITICAL') ? 'bg-red-500/5' : 'bg-yellow-100/5'}`}>
+      <span className="text-gray-300 w-25 flex-shrink-0">[{time}]</span>
+      <span className={`w-25 ${colors[type] || 'text-white'}`}>{type}</span>
+      <span className={`flex-1 ${(glow && type === 'CRITICAL') ? 'text-red-400' : 'text-[#fef08a]'}`}>{msg}</span>
+      <ChevronRight size={10} className="text-gray-800 opacity-0 group-hover:opacity-100" />
+    </div>
   );
 }

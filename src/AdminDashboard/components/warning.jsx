@@ -7,7 +7,7 @@ const { warning } = mockData;
 
 export const AlertCard = () => {
   return (
-    <DashboardCard title="Security Alerts" className="col-span-1 md:col-span-4 h-full">
+    <DashboardCard title="Security Alerts" className="col-span-1 md:col-span-4 h-fit">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 overflow-y-auto pr-1">
 
         {warning.map((e, idx) => (
