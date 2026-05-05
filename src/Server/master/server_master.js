@@ -10,7 +10,7 @@ import cors from "cors";
 import pool from "../shared/database/connect.js";
 
 // Import Socket
-import {initWorkerWebSocket} from './socket_server/handlers/workerHandler.js'
+import initWorkerWebSocket from './socket_server/handlers/workerHandler.js'
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -27,8 +27,8 @@ const httpServer = createServer(app);
 // app.set('io', io);
 
 // // Middlewares
-// app.use(cors());
-// app.use(express.json());
+app.use(cors());
+app.use(express.json());
 
 // Route Mounting — Mỗi nhóm chức năng là một file riêng
 app.use('/api/auth', authRoutes);           // Đăng ký / Đăng nhập UI
