@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import initMasterWebSocket from "./socket_client/masterSync.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -18,7 +19,7 @@ app.use("api/agent/upload", verifyAgentSession, (req, res) => {
     res.sendStatus(200);
 });
 
-
+initMasterWebSocket('ws://localhost:6000');
 
 // Khởi động Server
 const PORT = process.env.PORT_WORKER || 3001;
