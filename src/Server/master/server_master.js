@@ -32,8 +32,8 @@ const httpServer = createServer(app);
 
 // Route Mounting — Mỗi nhóm chức năng là một file riêng
 app.use('/api/auth', authRoutes);           // Đăng ký / Đăng nhập UI
-app.use('/api/dashboard', dashRoutes);      // Quản lý Agent (JWT protected)(role users)
-app.use('/api/agent', agentRoutes);         // Giao tiếp Agent (Handshake + Upload)
+app.use('/api/dashboard', dashRoutes);      // Quản lý Agent
+app.use('/api/agent', agentRoutes);         // Giao tiếp Agent 
 
 
 // Khởi động Server
