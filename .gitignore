@@ -5,7 +5,6 @@ src/Server/.env
 dist_agent/
 build/
 data/
-src/Server/master/node_modules/
-src/Server/node_modules/
 src/agents/socket_debug.go
 .env
+node_modules

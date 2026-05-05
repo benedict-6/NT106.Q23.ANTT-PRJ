@@ -5,12 +5,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Tự động xác định vị trí của file config này
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env")});
+dotenv.config();
 
-if(!process.env.AES_MASTER_KEY){
+if (!process.env.AES_MASTER_KEY) {
 	throw new Error("Lỗi: chưa cấu hình master key cho AES");
 }
 export const masterkey = Buffer.from(process.env.AES_MASTER_KEY, 'hex')
