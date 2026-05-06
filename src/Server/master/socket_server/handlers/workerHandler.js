@@ -7,7 +7,7 @@ import { getAllRules } from "../services/ruleService.js";
 
 export 	const activeWorkers = new Map();
 
-export default function initWorkerWebSocket(port = 6000) {
+export default function initWorkerWebSocket(port) {
 	const wss = new WebSocketServer({ port});
 
 	// Danh bạ lưu trữ các kết nối đang sống (Active connections)

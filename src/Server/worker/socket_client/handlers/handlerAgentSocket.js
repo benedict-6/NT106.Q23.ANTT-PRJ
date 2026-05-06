@@ -1,6 +1,5 @@
 import WebSocket, {WebSocketServer} from 'ws';
 
-
 export default function initAgentListener(port, masterWs){
     //Code mẫu nhân data từ agent
     const wssForAgents = new WebSocketServer({port}); 
@@ -27,6 +26,7 @@ export default function initAgentListener(port, masterWs){
                         console.log(`[Worker] Nhận gói tin không xác định: ${data.type}`);
                 }
 
+            
             } catch (err) {
                 console.error('[Worker] Lỗi parse JSON từ Agent:', err.message);
             }

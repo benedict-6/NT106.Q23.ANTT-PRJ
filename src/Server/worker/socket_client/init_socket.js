@@ -1,7 +1,7 @@
-import initMasterWebSocket from "./handlers/handlerMasterSocket";
-import initAgentListener from "./handlers/handlerAgentSocket";
+import initMasterWebSocket from "./handlers/handlerMasterSocket.js/index.js";
+import initAgentListener from "./handlers/handlerAgentSocket.js";
 
 export default function InitSocket(url ,port){
 	const masterWs = initMasterWebSocket(url);
-	initAgentListener(workerConfig.port, masterWs)
+	initAgentListener(port, masterWs)
 }
