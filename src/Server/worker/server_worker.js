@@ -17,7 +17,7 @@ app.use(express.json());
 initMasterWebSocket('ws://localhost:6000');
 
 // POST /api/agent/upload — Agent gửi dữ liệu (bảo vệ bởi session token)
-app.use("api/agent/upload", verifyAgentSession, (req, res) => {
+app.use("/api/agent/upload", verifyAgentSession, (req, res) => {
     res.sendStatus(200);
 });
 

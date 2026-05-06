@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "dev:master": "nodemon src/Server/master/server_master.js",
-        "dev:worker": "nodemon src/Server/worker/server.js",
+        "dev:worker": "nodemon src/Server/worker/server_worker.js",
         "dev": "concurrently \"npm run dev:master\" \"npm run dev:worker\""
     },
     "dependencies": {
