@@ -16,9 +16,9 @@ export const Odysee = () => <SiOdysee color="#0070FF" size={25}/>
 
 export const School = () => <SiHtmlacademy color="#0070FF" size={25}/>
 
-export const Gmail = () => <SiGmail color="#0070FF" size={25}/>
+export const Gmail = () => <SiGmail color="#0070FF" size={22}/>
 
-export const KeeWeb = () => <SiKeeweb color="#0070FF" size={25}/>
+export const KeeWeb = () => <SiKeeweb color="#0070FF" size={22}/>
 
 export const Guide = () => <SiBookstack color="#0070FF" size={25}/>
 

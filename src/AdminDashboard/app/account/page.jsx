@@ -16,7 +16,6 @@ const { account } = mockData;
 const AccountPage = () => {
   const userData = account;
   const defaultPassDisplay = "••••••••••••••••••••••••••••";
-  const { handlePowerOff } = useNavigation();
   const [showHash, setShowHash] = useState(false);
 
   return (

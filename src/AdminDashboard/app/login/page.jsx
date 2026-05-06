@@ -1,16 +1,12 @@
-'use client';
-
-import React, {useState} from 'react';
+"use client";
+import React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { Terminal, ArrowRight } from 'lucide-react';
 import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
-import { useNavigation } from '../../hooks/useNavigation.js';
 import { Github, Discord, BattleDotNet, KeyCDN, RobotFramework } from '../../helper/icons.jsx';
 
 const LoginPage = () => {
-    const { handleDashboardClick, handleRegister } = useNavigation();
-    
     const handleLogin = () => {
         // Handle Auth logic
     };
@@ -20,7 +16,7 @@ const LoginPage = () => {
         <div className="scanline" />
         
         <RenderUIPattern/>
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
@@ -104,16 +100,17 @@ const LoginPage = () => {
             <div className="mt-3 flex flex-col items-center space-y-4">
             <p className="text-base text-gray-600 tracking-wider">
                 FIRST-TIMER ?{' '}
-                <button onClick={handleRegister} className="text-blue-600 font-bold hover:text-blue-400 hover:underline cursor-pointer bg-transparent">JOIN OUR FORCES</button>
+                <Link href={"/register"}><button className="text-blue-600 font-bold hover:text-blue-400 hover:underline cursor-pointer bg-transparent">JOIN OUR FORCES</button></Link>
             </p>
-            
-            <button onClick={handleDashboardClick} className="inline-flex items-center space-x-2 text-[12px] text-blue-500/40 hover:text-blue-500 transition-colors border border-blue-500/20 px-3 py-1.5 rounded-full uppercase tracking-tighter">
-                <BattleDotNet/>
-                <span>demo bypass_auth</span>
-            </button>
+            <Link href={"/"}>
+                <button className="inline-flex items-center space-x-2 text-[12px] text-blue-500/40 hover:text-blue-500 transition-colors border border-blue-500/20 px-3 py-1.5 rounded-full uppercase tracking-tighter">
+                    <BattleDotNet/>
+                    <span>demo bypass_auth</span>
+                </button>
+            </Link>
             </div>
         </motion.div>
-        </div>
+    </div>
     );
 }
 
