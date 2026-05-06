@@ -9,11 +9,7 @@ const port = 3000;
 
 app.prepare().then(() => {
   const server = express();
-
-  server.get('/api/health', (req, res) => {
-      res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
+  
   // Handle all other routes with Next.js
   server.all(/.*/, (req, res) => {
       const parsedUrl = parse(req.url, true);

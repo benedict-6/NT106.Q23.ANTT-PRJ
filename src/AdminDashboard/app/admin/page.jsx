@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Wifi, ExternalLink, FileText, Terminal as TerminalIcon, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Link from 'next/link.js';
 
 import { mockData } from '../../helper/constant';
 import { SideBar } from '../../components/sidebar.jsx';
@@ -160,11 +161,13 @@ export default function AdminFleetView() {
                           <td className="py-3 text-[#e11d48]">{log.permission}</td>
                           <td className="py-3 px-5 text-gray-600">{log.created_at || "???"}</td>
                           <td className="py-3 text-right">
-                            <button onClick={() => router.push(`/log?id=${i}`)}
-                                    className="hover:cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95">
-                              <ExternalLink size={14} />
-                              <span>Detail</span>
-                            </button>
+                            <Link 
+                                href={`/log?id=${i}`}
+                                className="hover:cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95"
+                              >
+                                <ExternalLink size={14} />
+                                <span>Detail</span>
+                            </Link>
                           </td>
                         </tr>
                       ))}

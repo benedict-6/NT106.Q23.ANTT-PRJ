@@ -101,7 +101,7 @@ export const InputField = ({ label, placeholder, icon, type = "text" }) => {
         <label className="font-extrabold text-[18px] uppercase tracking-tight text-blue-500 group-focus-within:text-blue-400 transition-colors leading-none">{label}</label>
       </div>
       <div className="relative">
-        {icon && (<div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">{icon}</div>)}
+        {icon && (<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">{icon}</div>)}
         <input 
           type={type} 
           placeholder={placeholder}
@@ -109,6 +109,7 @@ export const InputField = ({ label, placeholder, icon, type = "text" }) => {
           required
           autoComplete='off'
           maxLength={28}
+          spellCheck="false"
         />
         <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-blue-500 group-focus-within:w-full transition-all duration-500" />
       </div>

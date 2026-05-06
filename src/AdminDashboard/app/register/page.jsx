@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { RotateCcw, ArrowRight, ArrowLeft, Fingerprint, PersonStanding, KeyRound, Sparkles, CircleAlert } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Fingerprint, CircleAlert } from 'lucide-react';
+import { Odysee, School, Gmail, KeeWeb, Again, Guide } from '../../helper/icons.jsx';
 
 import { CustomCheckbox, CornerBrackets, InputField, RenderUIPattern } from '../../helper/renderUI.js'
 import { useNavigation } from '../../hooks/useNavigation.js';
@@ -68,12 +69,12 @@ const RegisterPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-base font-mono">
-                  <InputField label="F1RST N4M3" placeholder="" icon={<PersonStanding size={25} />} />
+                  <InputField label="F1RST N4M3" placeholder="" icon={<Odysee/>} />
                   <InputField label="L4ST N4M3" placeholder="" />
                 </div>
 
-                <InputField label="SCH00L" placeholder=""/>
-                <InputField label="9M41L" type="email"/>
+                <InputField label="SCH00L" placeholder="" icon={<School/>}/>
+                <InputField label="9M41L" type="email" icon={<Gmail/>}/>
 
                 <div className='flex justify-end'>
                   <button 
@@ -100,8 +101,8 @@ const RegisterPage = () => {
                   </h2>
                 </div>
 
-                <InputField label="P4SSW0RD" placeholder="" icon={<KeyRound size={20} />} type="password" />
-                <InputField label="C0NF1RM P4SSW0RD" placeholder="" icon={<RotateCcw size={20} />} type="password" />
+                <InputField label="P4SSW0RD" placeholder="" icon={<KeeWeb/>} type="password" />
+                <InputField label="C0NF1RM P4SSW0RD" placeholder="" icon={<Again/>} type="password" />
 
                 <div className="bg-blue-500/5 border border-blue-500/10 p-2 rounded-sm">
                   <div className="flex flex-col space-x-3">
@@ -156,7 +157,7 @@ const RegisterPage = () => {
               ALREADY HAVE AN ACCOUNT
             </button>
             <div className='flex flex-row items-center justify-center gap-x-2'>
-              <Sparkles size={20} color='gray'/>
+              <Guide/>
               <Link href="/guide" className="text-[13px] font-bold text-gray-600 tracking-[0.25em] hover:text-blue-400 transition-colors uppercase border-b border-transparent hover:border-blue-400/30 pb-1">
                 GUIDE
               </Link>

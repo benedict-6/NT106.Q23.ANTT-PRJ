@@ -30,6 +30,10 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@icons-pack/react-simple-icons', 'motion', 'framer-motion', 'recharts'],
+  },
 };
 
 export default nextConfig;
+

@@ -1,4 +1,5 @@
-'use client';
+"use client"
+import Link from 'next/link.js';
 import { LogOut } from 'lucide-react';
 
 import React, {useState} from 'react';
@@ -9,7 +10,6 @@ import { AppHeader } from '../../components/header.jsx';
 
 import { CompactRow } from '../../helper/renderUI.js';
 import { mockData } from '../../helper/constant.js';
-import { useNavigation } from '@/hooks/useNavigation.js';
 
 const { account } = mockData;
 
@@ -89,10 +89,12 @@ const AccountPage = () => {
                 <div className="mt-3 pt-4 border-t border-white/5 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                   </div>
-                  <button onClick={handlePowerOff} className="hover:cursor-pointer border rounded-full px-2 py-3 flex items-center space-x-1 text-gray-600 hover:text-red-500 transition-colors uppercase text-xs font-bold tracking-tight group">
+                  <Link href="/login">
+                  <button className="hover:cursor-pointer border rounded-full px-2 py-3 flex items-center space-x-1 text-gray-600 hover:text-red-500 transition-colors uppercase text-xs font-bold tracking-tight group">
                     <span>Logout</span>
                     <LogOut size={14} className="group-hover:translate-x-1 transition-transform" />
                   </button>
+                  </Link>
                 </div>
               </div>
             </div>

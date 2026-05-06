@@ -3,13 +3,10 @@
 import React, {useState} from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Terminal, Key, ArrowRight, Drama, Icon } from 'lucide-react';
-import { spider } from '@lucide/lab';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGithub, faDiscord } from '@fortawesome/free-brands-svg-icons';
-
+import { Terminal, ArrowRight } from 'lucide-react';
 import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
 import { useNavigation } from '../../hooks/useNavigation.js';
+import { Github, Discord, BattleDotNet, KeyCDN, RobotFramework } from '../../helper/icons.jsx';
 
 const LoginPage = () => {
     const { handleDashboardClick, handleRegister } = useNavigation();
@@ -52,13 +49,13 @@ const LoginPage = () => {
                 </div>
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-500/30 group-focus-within:text-blue-500 transition-colors">
-                        <Drama size={22} />
+                        <RobotFramework/>
                     </div>
                     <input 
                     type="text" 
                     placeholder="IDENTIFY WHO YOU ARE"
                     autoComplete="off"
-                    className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-11 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base uppercase"
+                    className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-13 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base uppercase"
                     />
                 </div>
                 </div>
@@ -69,13 +66,13 @@ const LoginPage = () => {
                 </div>
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-500/30 group-focus-within:text-blue-500 transition-colors">
-                    <Key size={22} />
+                    <KeyCDN/>
                     </div>
                     <input 
                     type="password" 
                     placeholder="PROVE WHO YOU ARE"
                     autoComplete="new-password"
-                    className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-11 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base"
+                    className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-13 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base"
                     />
                 </div>
                 <div className="text-right">
@@ -99,8 +96,8 @@ const LoginPage = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <HackerButton icon={<FontAwesomeIcon icon={faGithub} size="xl"/>} label="GitHub"/>
-                <HackerButton icon={<FontAwesomeIcon icon={faDiscord} size="xl" />} label="Discord" />
+                <HackerButton icon={<Github/>} label="GitHub"/>
+                <HackerButton icon={<Discord/>} label="Discord" />
             </div>
             </div>
 
@@ -111,7 +108,7 @@ const LoginPage = () => {
             </p>
             
             <button onClick={handleDashboardClick} className="inline-flex items-center space-x-2 text-[12px] text-blue-500/40 hover:text-blue-500 transition-colors border border-blue-500/20 px-3 py-1.5 rounded-full uppercase tracking-tighter">
-                <Icon iconNode={spider} size={22}/>
+                <BattleDotNet/>
                 <span>demo bypass_auth</span>
             </button>
             </div>
