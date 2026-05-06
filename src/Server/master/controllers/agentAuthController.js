@@ -71,20 +71,8 @@ const agentController = {
                 [sessionToken, agent_id, req.body.hostname || null, mac_address || null]
             );
 
-            // REAL-TIME: Emit Socket.IO event cho UI
-            const io = req.app.get('io');
-            if (io && agent.user_id) {
-                const agentInfo = {
-                    agent_id: agent.agent_id,
-                    agent_description: agent.agent_description,
-                    hostname: req.body.hostname || null,
-                    mac_address: mac_address,
-                    agent_status: agent.agent_status,
-                    last_active: new Date().toISOString()
-                };
-                io.to(`user:${agent.user_id}`).emit('agent:connected', agentInfo);
-                console.log(`[SOCKET.IO] Emitted agent:connected for ${agent_id} to user:${agent.user_id}`);
-            }
+            // Gửi sự kiện cho UI thông qua WebSocket native (nếu có hệ thống activeUIs)
+            // Ví dụ: activeUIs.forEach(uiClient => uiClient.send(JSON.stringify({ type: 'AGENT_CONNECTED', payload: agent_id })));
 
             res.status(200).json({
                 message: 'OK!',

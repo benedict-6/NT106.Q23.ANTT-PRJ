@@ -4,6 +4,7 @@
 import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
 import { getAllRules } from "../services/ruleService.js";
+import pool from "../../../shared/database/connect.js";
 
 export const activeWorkers = new Map();
 
@@ -21,7 +22,7 @@ export default function initWorkerWebSocket(port = 6000) {
 			ws.close(4001, "Timeout: Không nhận được gói tin định danh");
 		}, 5000);
 
-		ws.on('message', (message) => {
+		ws.on('message', async (message) => {
 			try {
 				const data = JSON.parse(message);
 				console.log(`Nhận được dữ liệu từ worker:`, data);
@@ -54,6 +55,20 @@ export default function initWorkerWebSocket(port = 6000) {
 					// Lưu DB...
 				}
 
+				if (data.type === 'UPDATE_LAST_ACTIVE') {
+					try {
+						const { agent_id } = data.payload;
+						await pool.query(
+							"UPDATE agents SET last_active = NOW() WHERE agent_id = $1",
+							[agent_id]
+						);
+						// console.log(`[Master] Cập nhật last_active cho Agent [${agent_id}] thành công.`);
+					} catch (err) {
+						console.error(`[Master] Lỗi cập nhật last_active cho Agent:`, err.message);
+					}
+					return;
+				}
+
 				if (data.type === 'FIM_ALERT') {
 					console.log(`[Master] File ${data.payload.file_path} bị thay đổi! Đang xử lý...`);
 
@@ -68,9 +83,9 @@ export default function initWorkerWebSocket(port = 6000) {
 					});
 
 					//Giả sử gửi data lên UI
-					activeUIs.forEach(uiClient => {
-						if (uiClient.readyState === 1) uiClient.send(alertMessage);
-					});
+					// activeUIs.forEach(uiClient => {
+					// 	if (uiClient.readyState === 1) uiClient.send(alertMessage);
+					// });
 				}
 			}
 			catch (err) {
