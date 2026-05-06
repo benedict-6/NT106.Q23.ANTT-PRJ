@@ -15,7 +15,7 @@ const { account } = mockData;
 
 const AccountPage = () => {
   const userData = account;
-  const defaultPassDisplay = "***************************";
+  const defaultPassDisplay = "••••••••••••••••••••••••••••";
   const { handlePowerOff } = useNavigation();
   const [showHash, setShowHash] = useState(false);
 
@@ -66,13 +66,13 @@ const AccountPage = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-row items-center space-x-2 text-gray-500 gap-x-5">
                         <span className="text-base font-bold font-mono uppercase tracking-widest text-[#60a5fa]">Password:</span>
-                        <div className={`w-full p-2 bg-black/60 border border-white/5 rounded-sm font-mono text-base break-all leading-relaxed transition-all duration-300 ${showHash ? 'text-[#f87171] opacity-100' : 'text-gray-300 opacity-40 select-none blur-[0px]'}`}>
-                            {showHash? userData.password : defaultPassDisplay}
+                        <div className={`w-[30ch] min-w-[30ch] max-w-[30ch] text-left overflow-hidden whitespace-nowrap p-2 bg-black/60 border border-white/5 rounded-sm font-mono text-base leading-relaxed transition-all duration-300 ${showHash ? 'text-[#f87171] opacity-100' : 'text-gray-300 opacity-40 select-none blur-[0px]'}`}>
+                            {showHash? userData.password.slice(0, 28).padEnd(28, ' ') : defaultPassDisplay}
                         </div>
                       </div>
                       <button 
                         onClick={() => setShowHash(!showHash)}
-                        className="text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest border-b border-blue-500/20"
+                        className="hover:cursor-pointer text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest border-b border-blue-500/20"
                       >
                         {showHash ? 'HIDE' : 'SHOW'}
                       </button>
@@ -89,7 +89,7 @@ const AccountPage = () => {
                 <div className="mt-3 pt-4 border-t border-white/5 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                   </div>
-                  <button onClick={handlePowerOff} className="border rounded-full px-2 py-3 flex items-center space-x-1 text-gray-600 hover:text-red-500 transition-colors uppercase text-xs font-bold tracking-widest group">
+                  <button onClick={handlePowerOff} className="hover:cursor-pointer border rounded-full px-2 py-3 flex items-center space-x-1 text-gray-600 hover:text-red-500 transition-colors uppercase text-xs font-bold tracking-tight group">
                     <span>Logout</span>
                     <LogOut size={14} className="group-hover:translate-x-1 transition-transform" />
                   </button>

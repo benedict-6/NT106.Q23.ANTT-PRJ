@@ -74,7 +74,7 @@ const WorkerList = () => {
                                                 toast.error("Upcoming"); 
                                                 // router.push(`/agent?id=${idx}`);
                                               }}
-                                          className="bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95">
+                                          className="hover:cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95">
                                             <ExternalLink size={14} />
                                             <span>Detail</span>
                                         </button>
