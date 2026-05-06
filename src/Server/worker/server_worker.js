@@ -16,7 +16,7 @@ app.use(express.json());
 InitSocket('http://localhost:6000', workerConfig.port)
 
 // POST /api/agent/upload — Agent gửi dữ liệu (bảo vệ bởi session token)
-app.use("api/agent/upload", verifyAgentSession, (req, res) => {
+app.use("/api/agent/upload", verifyAgentSession, (req, res) => {
     res.sendStatus(200);
 });
 

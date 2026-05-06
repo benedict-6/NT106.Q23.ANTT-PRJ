@@ -71,6 +71,9 @@ const agentController = {
                 [sessionToken, agent_id, req.body.hostname || null, mac_address || null]
             );
 
+            // Gửi sự kiện cho UI thông qua WebSocket native (nếu có hệ thống activeUIs)
+            // Ví dụ: activeUIs.forEach(uiClient => uiClient.send(JSON.stringify({ type: 'AGENT_CONNECTED', payload: agent_id })));
+
             res.status(200).json({
                 message: 'OK!',
                 session_token: sessionToken
