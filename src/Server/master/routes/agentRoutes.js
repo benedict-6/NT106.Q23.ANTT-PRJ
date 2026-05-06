@@ -3,7 +3,7 @@ import express from 'express';
 import agentController from '../controllers/agentAuthController.js';
 
 // Đường dẫn đã được sửa để lùi 2 bước ra ngoài thư mục shared
-import verifyAgentSession from '../../shared/middlewares/verifyAgentSession.js';
+import verifyAgentSession from '../../shared/middlewares/handshakeAgent.js';
 
 const router = express.Router();
 

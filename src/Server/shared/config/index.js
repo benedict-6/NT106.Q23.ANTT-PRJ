@@ -25,11 +25,12 @@ export const DB_config = {
 	port: parseInt(process.env.DB_PORT || 5435)
 }
 
-export const worker = {
+export const workerConfig = {
 	ID1: process.env.Worker1,
 	ID2: process.env.Worker2,
 	ID3: process.env.Worker3,
-	ID4: process.env.Worker4
+	ID4: process.env.Worker4,
+	port: process.env.WORKER_PORT
 }
 
 export const masterConfig = {

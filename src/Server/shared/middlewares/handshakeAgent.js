@@ -1,7 +1,7 @@
 // Middleware xác thực Session Token cho các request từ Agent (upload data)
 // Agent gửi session_token trong header Authorization sau khi handshake thành công
 
-import pool from '../../shared/database/connect.js';
+import pool from '../database/connect.js';
 
 const verifyAgentSession = async (req, res, next) => {
     const authHeader = req.headers['authorization'];

@@ -11,7 +11,7 @@ import pool from "../shared/database/connect.js";
 
 // Import Socket
 import {initWorkerWebSocket} from './socket_server/handlers/workerHandler.js'
-
+import initSocket from "./socket_server/init_socket.js";
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
 import dashRoutes from "./routes/dashRoutes.js";
@@ -36,11 +36,8 @@ app.use('/api/dashboard', dashRoutes);      // Quản lý Agent
 app.use('/api/agent', agentRoutes);         // Giao tiếp Agent 
 
 
-// Khởi động Server
-const PORT = masterConfig.port || 3000;
-
 // Khởi động socket Master - Worker
-initWorkerWebSocket(6000);
+initSocket(masterConfig.port); 
 
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
