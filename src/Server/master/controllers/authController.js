@@ -7,7 +7,7 @@ import pool from "../../shared/database/connect.js";
 
 const authController = {
     register: async (req, res) => {
-        const {user_email,password} = req.body;
+        const {user_email, password, role} = req.body;
 
         try {
             const email = await pool.query(
@@ -21,10 +21,14 @@ const authController = {
             }
         
             const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Nếu có gửi role thì dùng, không thì tự động gán là 'viewer'
+            const assignedRole = role || 'viewer';
             
+            // Cập nhật câu lệnh SQL: thêm cột _role và biến $3
             await pool.query(
-                "INSERT INTO users (email, password_hash) VALUES ($1, $2)",
-                [user_email, hashedPassword]
+                "INSERT INTO users (email, password_hash, _role) VALUES ($1, $2, $3)",
+                [user_email, hashedPassword, assignedRole]
             )
 
             res.status(201).json({ message: 'User registered successfully' });
@@ -61,8 +65,11 @@ const authController = {
                 return res.status(400).json({message: 'Invalid email or password' }); // Password does not match
             }
 
-            const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '8h'});
-            res.json({token});
+            const token = jwt.sign({ 
+                userId: user.user_id, 
+                _role: user._role
+            }, process.env.JWT_SECRET, { expiresIn: '8h'});
+            res.json({ token, userId: user.user_id });
         }
         catch (err)
         {

@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation';
 
 export const useNavigation = () => { 
     const router = useRouter(); 
-
     const handleDashboardClick = () => { router.push('/'); }; 
 
     const handleShieldClick = () => { router.push('/admin'); }; 

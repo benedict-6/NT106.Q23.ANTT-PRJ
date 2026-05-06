@@ -94,7 +94,7 @@ export const CornerBrackets = () => {
   );
 }
 
-export const InputField = ({ label, placeholder, icon, type = "text" }) => {
+export const InputField = ({ label, placeholder, icon, type = "text", value, onChange }) => {
   return (
     <div className="space-y-2 group">
       <div className="flex items-center justify-between">
@@ -110,6 +110,8 @@ export const InputField = ({ label, placeholder, icon, type = "text" }) => {
           autoComplete='off'
           maxLength={28}
           spellCheck="false"
+          value={value}
+          onChange={onChange}
         />
         <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-blue-500 group-focus-within:w-full transition-all duration-500" />
       </div>
@@ -157,7 +159,7 @@ export const LogLine = ({ time, type, msg, glow = true }) => {
     CRITICAL: 'text-red-500',
   };
   return (
-    <div className={`hover:cursor-pointer flex items-start space-x-3 py-0.5 group ${(glow && type === 'CRITICAL') ? 'bg-red-500/5' : 'bg-yellow-100/5'}`}>
+    <div className={`hover:cursor-pointer flex items-start space-x-3 py-0.5 group ${(glow && type === 'CRITICAL') ? 'bg-red-150/5' : 'bg-yellow-100/5'}`}>
       <span className="text-gray-300 w-25 flex-shrink-0">[{time}]</span>
       <span className={`w-25 ${colors[type] || 'text-white'}`}>{type}</span>
       <span className={`flex-1 ${(glow && type === 'CRITICAL') ? 'text-red-400' : 'text-[#fef08a]'}`}>{msg}</span>

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "next dev --turbo",
+    "dev": "next dev --turbo",
     "detect": "nodemon server.js",
     "build": "next build",
     "lint": "eslint .",
@@ -30,7 +30,8 @@
     "react-dom": "^19.2.1",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.8.1",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.11",

@@ -6,37 +6,42 @@ import (
 	"compress/gzip"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 )
 
 const (
-	socketPath    = "/tmp/agent_queue.sock" // Keep socket in local folder or /tmp
-	serverBaseURL = "http://localhost:3000"
-	secretKey     = "aenhom8maidinh" // Used for AES payload encryption
-	configPath    = "./agent_metadata.json"
+	socketPath = "/tmp/agent_queue.sock" // Keep socket in local folder or /tmp
+	configPath = "./agent_config.json"
 )
 
+// Config được sinh từ Server khi user download agent
 type AgentConfig struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	AccessToken string `json:"access_token,omitempty"`
+	AgentID        string `json:"agent_id"`
+	SecretKey      string `json:"secret_key"`
+	ServerURL      string `json:"server_url"`
+	LoadBalanceURL string `json:"lb_url"`
+	// Runtime only — không lưu file
+	SessionToken string `json:"-"`
 }
 
 var currentConfig AgentConfig
 
-// Metric format sent by C++ collectors
+// Metric format sent by collectors
 type AgentMessage struct {
 	Type     string          `json:"type"`
 	Metadata json.RawMessage `json:"metadata"`
@@ -45,17 +50,23 @@ type AgentMessage struct {
 func main() {
 	log.Println("Starting agentCollector...")
 
-	// 1. Quản lý Đăng ký / Đăng nhập
-	err := setupAuthentication()
-	if err != nil {
-		log.Fatalf("Failed to setup authentication: %v", err)
+	// 1. Đọc config (agent_id, secret_key, server_url)
+	if err := loadConfig(); err != nil {
+		log.Fatalf("Lỗi đọc config: %v", err)
+	}
+	log.Printf("Loaded config: agent_id=%s, server=%s", currentConfig.AgentID, currentConfig.ServerURL)
+
+	// 2. Handshake HMAC-SHA256 với Master Server
+	if err := performHandshake(); err != nil {
+		log.Printf("[!] Handshake thất bại, sẽ thử lại sau: %v", err)
+	} else {
+		log.Println("Handshake thành công! Agent đã được xác thực.")
 	}
 
-	// 2. Thiết lập Unix Socket
+	// 3. Thiết lập Unix Socket
 	if err := os.RemoveAll(socketPath); err != nil {
 		log.Fatalf("Failed to remove old socket file: %v", err)
 	}
-	// Create directories if not exist
 	os.MkdirAll(filepath.Dir(socketPath), 0755)
 
 	listener, err := net.Listen("unix", socketPath)
@@ -92,126 +103,101 @@ func main() {
 	}
 }
 
-// // ---- Authentication Logic ----
+// ---- Config & Authentication ----
 
-func setupAuthentication() error {
-	// Kiểm tra xem file cấu hình có tồn tại không
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Chưa có, tiến hành tạo thông tin tài khoản tự động (Đăng ký)
-		hostname, _ := os.Hostname()
-		if hostname == "" {
-			hostname = "unknown_device"
-		}
-
-		// Random password 12 kí tự
-		passBytes := make([]byte, 6)
-		rand.Read(passBytes)
-		randomPass := fmt.Sprintf("%x", passBytes)
-
-		currentConfig = AgentConfig{
-			Username: "agent_" + hostname,
-			Password: randomPass,
-		}
-
-		log.Printf("[!] CHƯA CÓ CẤU HÌNH. Tiến hành Đăng ký hệ thống với Master Node...")
-		if err := registerAgent(currentConfig); err != nil {
-			log.Printf("Warning: Đăng ký thất bại (có thể server chưa bật). Sẽ thử lại sau: %v", err)
-		} else {
-			log.Printf("\n=======================================================")
-			log.Printf("  ĐĂNG KÝ THÀNH CÔNG!")
-			log.Printf("  Dùng tài khoản này để đăng nhập vào Web Dashboard:")
-			log.Printf("  > Username : %s", currentConfig.Username)
-			log.Printf("  > Password : %s", currentConfig.Password)
-			log.Printf("=======================================================\n")
-		}
-		saveConfig() // Lưu lại ID và Pass kể cả khi chưa gọi được server
-	} else {
-		// Đã có, đọc file
-		b, err := ioutil.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		json.Unmarshal(b, &currentConfig)
+func loadConfig() error {
+	b, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("không tìm thấy file %s: %w\nHãy tải agent package từ Dashboard trước", configPath, err)
 	}
-
-	// Sau khi đọc hoặc tạo mới, tiến hành Login lấy Token
-	log.Printf("Đang tiến hành Xác thực (Login) lấy phiên bản chạy...")
-	if err := loginAgent(); err != nil {
-		log.Printf("Warning: Không thể login server lúc này, process vẫn sẽ chạy và tự thử lại sau: %v", err)
-	} else {
-		log.Printf("Xác thực hoàn tất, Server cấp quyền OK.")
+	if err := json.Unmarshal(b, &currentConfig); err != nil {
+		return fmt.Errorf("config JSON không hợp lệ: %w", err)
+	}
+	if currentConfig.AgentID == "" || currentConfig.SecretKey == "" || currentConfig.ServerURL == "" {
+		return fmt.Errorf("config thiếu trường bắt buộc (agent_id, secret_key, server_url)")
 	}
 	return nil
 }
 
-func registerAgent(cfg AgentConfig) error {
-	payload, _ := json.Marshal(map[string]string{
-		"username": cfg.Username,
-		"password": cfg.Password,
-		"info":     "Agent Device Node",
+func getMACAddress() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "00:00:00:00:00:00"
+	}
+	for _, iface := range interfaces {
+		// Bỏ qua loopback và interface không có MAC
+		if iface.Flags&net.FlagLoopback != 0 || len(iface.HardwareAddr) == 0 {
+			continue
+		}
+		// Bỏ qua interface không active
+		if iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		return iface.HardwareAddr.String()
+	}
+	return "00:00:00:00:00:00"
+}
+
+func getHostname() string {
+	h, err := os.Hostname()
+	if err != nil {
+		return "unknown"
+	}
+	return h
+}
+
+func performHandshake() error {
+	macAddr := getMACAddress()
+	hostname := getHostname()
+	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
+
+	// Payload = MAC_Address + "|" + Timestamp
+	payload := macAddr + "|" + timestamp
+
+	// Signature = HMAC-SHA256(payload, secret_key)
+	h := hmac.New(sha256.New, []byte(currentConfig.SecretKey))
+	h.Write([]byte(payload))
+	signature := hex.EncodeToString(h.Sum(nil))
+
+	body, _ := json.Marshal(map[string]string{
+		"agent_id":    currentConfig.AgentID,
+		"mac_address": macAddr,
+		"hostname":    hostname,
+		"timestamp":   timestamp,
+		"signature":   signature,
 	})
 
-	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/register", bytes.NewReader(payload))
+	req, err := http.NewRequest("POST", currentConfig.ServerURL+"/api/agent/handshake", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("không thể kết nối Master Server: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("server returned status: %s", resp.Status)
-	}
-	return nil
-}
-
-func loginAgent() error {
-	payload, _ := json.Marshal(map[string]string{
-		"username": currentConfig.Username,
-		"password": currentConfig.Password,
-	})
-
-	req, err := http.NewRequest("POST", serverBaseURL+"/api/agent/login", bytes.NewReader(payload))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("server returned status: %s", resp.Status)
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("handshake thất bại [%s]: %s", resp.Status, string(respBody))
 	}
 
-	// Đọc response json (giả sử {"token": "xyz123"})
-	var res map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return err
+	var result map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("không thể đọc response: %w", err)
 	}
 
-	if t, ok := res["token"]; ok {
-		currentConfig.AccessToken = t
-		saveConfig()
+	if token, ok := result["session_token"]; ok {
+		currentConfig.SessionToken = token
+		log.Printf("Session token đã nhận được từ Master Server")
 	} else {
-		// Fallback
-		currentConfig.AccessToken = "dummy-token-if-backend-not-implemented"
+		return fmt.Errorf("response không chứa session_token")
 	}
-	return nil
-}
 
-func saveConfig() {
-	b, _ := json.MarshalIndent(currentConfig, "", "  ")
-	ioutil.WriteFile(configPath, b, 0644)
+	return nil
 }
 
 // ---- Data Processing ----
@@ -267,13 +253,17 @@ func sendBatch(batch [][]byte) {
 	gw.Close()
 
 	// 3. Encrypt via AES-GCM
-	encrypted, err := encrypt(compressed.Bytes(), []byte(secretKey))
+	encrypted, err := encrypt(compressed.Bytes(), []byte(currentConfig.SecretKey))
 	if err != nil {
 		return
 	}
 
 	// 4. Send to server
-	req, err := http.NewRequest("POST", serverBaseURL+"/upload", bytes.NewReader(encrypted))
+<<<<<<< HEAD
+	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(encrypted))
+=======
+	req, err := http.NewRequest("POST", currentConfig.ServerURL+"/api/agent/upload", bytes.NewReader(encrypted))
+>>>>>>> origin
 	if err != nil {
 		return
 	}
@@ -281,10 +271,10 @@ func sendBatch(batch [][]byte) {
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Content-Encoding", "aes-gcm")
 
-	// Thêm Access Token vào Header để xác thực tiến trình gửi
-	token := currentConfig.AccessToken
+	// Thêm Session Token vào Header để xác thực
+	token := currentConfig.SessionToken
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("authorization", "Bearer "+token)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -296,8 +286,8 @@ func sendBatch(batch [][]byte) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		log.Printf("Token hết hạn hoặc bị từ chối (401/403). Đang Login lại...")
-		loginAgent() // Thử lấy lại token cho batch sau
+		log.Printf("Token hết hạn hoặc bị từ chối (401/403). Đang Handshake lại...")
+		performHandshake() // Thử lấy lại token cho batch sau
 	} else if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		log.Printf("Successfully sent batch of %d records", len(batch))
 	} else {

@@ -65,8 +65,8 @@ const AccountPage = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-row items-center space-x-2 text-gray-500 gap-x-5">
                         <span className="text-base font-bold font-mono uppercase tracking-widest text-[#60a5fa]">Password:</span>
-                        <div className={`w-[30ch] min-w-[30ch] max-w-[30ch] text-left overflow-hidden whitespace-nowrap p-2 bg-black/60 border border-white/5 rounded-sm font-mono text-base leading-relaxed transition-all duration-300 ${showHash ? 'text-[#f87171] opacity-100' : 'text-gray-300 opacity-40 select-none blur-[0px]'}`}>
-                            {showHash? userData.password.slice(0, 28).padEnd(28, ' ') : defaultPassDisplay}
+                        <div className={`w-full p-2 bg-black/60 border border-white/5 rounded-sm font-mono text-base break-all leading-relaxed transition-all duration-300 ${showHash ? 'text-[#f87171] opacity-100' : 'text-gray-300 opacity-40 select-none blur-[0px]'}`}>
+                            {showHash? userData.password : defaultPassDisplay}
                         </div>
                       </div>
                       <button 

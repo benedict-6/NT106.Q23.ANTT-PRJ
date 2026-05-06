@@ -1,15 +1,80 @@
-"use client";
-import React from 'react';
+'use client';
+import { useRouter } from 'next/navigation';
+import React, {useState} from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Terminal, ArrowRight } from 'lucide-react';
-import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
-import { Github, Discord, BattleDotNet, KeyCDN, RobotFramework } from '../../helper/icons.jsx';
+import { Terminal, ArrowRight, Icon } from 'lucide-react';
+import { RobotFramework, BattleDotNet, KeyCDN, Github, Discord } from '../../helper/icons.jsx';
 
-const LoginPage = () => {
-    const handleLogin = () => {
-        // Handle Auth logic
-    };
+import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
+import { useNavigation } from '../../hooks/useNavigation.js';
+
+export default function LoginPage(){
+    const { handleDashboardClick, handleRegister, handleShieldClick } = useNavigation();
+    const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const handleLogin = async (e) => {
+      e.preventDefault();
+      setErrorMsg('');
+      setIsLoading(true);
+
+      try {
+          console.log("[1] Bắt đầu gửi dữ liệu Đăng nhập...");
+          
+          const response = await fetch('http://localhost:5000/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  user_email: email, 
+                  password: password 
+              }),
+          });
+
+          console.log("[2] Server đã phản hồi! Trạng thái HTTP:", response.status);
+          
+          const data = await response.json();
+          console.log("[3] Dữ liệu Server trả về:", data);
+
+          if (response.ok) {
+              if (!data.token) {
+                  setErrorMsg('Lỗi: Server báo thành công nhưng không đưa Token!');
+                  return;
+              }
+
+              localStorage.setItem('token', data.token);
+              
+              try {
+                  const base64Url = data.token.split('.')[1];
+                  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                  const payload = JSON.parse(atob(base64));
+                  console.log("[4] Giải mã Token thành công:", payload);
+
+                  const role = payload._role || payload.role;
+
+                  if (role === 'admin') {
+                      router.push('/admin');
+                  } else {
+                      router.push('/');
+                  }
+              } catch (decodeError) {
+                  console.error("Lỗi giải mã token:", decodeError);
+                  router.push('/'); 
+              }
+          } else {
+              setErrorMsg(data.message || 'Đăng nhập thất bại!');
+          }
+        } catch (error) {
+          console.error("Lỗi mạng (Network Error):", error);
+          setErrorMsg('Không thể kết nối đến máy chủ. (Server có đang bật không?)');
+        } finally {
+            setIsLoading(false);
+            console.log("[5] Hoàn tất vòng lặp!");
+        }
+     };
 
     return (
         <div className="min-h-screen hacker-bg flex flex-col items-center justify-center p-4 relative overflow-hidden font-mono">
@@ -38,7 +103,7 @@ const LoginPage = () => {
             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-500/50" />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-500/50" />
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleLogin}>
                 <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-[17px] uppercase tracking-tight font-bold text-blue-500">USERNAME</label>
@@ -48,9 +113,12 @@ const LoginPage = () => {
                         <RobotFramework/>
                     </div>
                     <input 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     type="text" 
                     placeholder="IDENTIFY WHO YOU ARE"
                     autoComplete="off"
+                    spellCheck="false"
                     className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-13 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base uppercase"
                     />
                 </div>
@@ -64,10 +132,13 @@ const LoginPage = () => {
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-500/30 group-focus-within:text-blue-500 transition-colors">
                     <KeyCDN/>
                     </div>
-                    <input 
+                    <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     type="password" 
                     placeholder="PROVE WHO YOU ARE"
                     autoComplete="new-password"
+                    spellCheck="false"
                     className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-13 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base"
                     />
                 </div>
@@ -76,7 +147,7 @@ const LoginPage = () => {
                 </div>
                 </div>
 
-                <button className="w-full bg-blue-900/20 border-2 border-blue-500 hover:bg-blue-500 hover:text-white text-blue-500 font-bold py-3 rounded-none flex items-center justify-center space-x-3 transition-all active:scale-[0.98] mt-2 group">
+                <button disabled={isLoading} type="submit" className="w-full bg-blue-900/20 border-2 border-blue-500 hover:bg-blue-500 hover:text-white text-blue-500 font-bold py-3 rounded-none flex items-center justify-center space-x-3 transition-all active:scale-[0.98] mt-2 group">
                     <span className="tracking-[0.3em]">HACK</span>
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -114,4 +185,3 @@ const LoginPage = () => {
     );
 }
 
-export default LoginPage;

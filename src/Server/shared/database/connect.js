@@ -1,37 +1,29 @@
 // ---> CODE CHUNG DÙNG CHO CẢ MASTER VÀ WORKER
 // Khởi tạo pool kết nối CSDL (Mongo/Postgres/Elasticsearch)
-import path from "path";
-import dotenv from "dotenv";
-dotenv.config({
-  path: path.resolve('../../../../.env')
-});
-
+import { DB_config } from "../config/index.js";
 import pkg from "pg";
+
+// // Đọc file .env
+// dotenv.config({ path: path.join(__dirname, '../../.env') });
+
 const { Pool } = pkg;
 
-// Create a new pool instance
+// Khởi tạo kết nối: Dùng toán tử || để ưu tiên POSTGRES_ trước, nếu không có mới tìm DB_
 const pool = new Pool({
-  user: process.env.DB_USER || "team2",
-  host: process.env.DB_HOST || "localhost",
-  database: process.env.DB_NAME || "monitoringDB",
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.POSTGRES_DB || process.env.DB_NAME,
+    user: process.env.POSTGRES_USER || process.env.DB_USER,
+    password: process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD,
 
-  // optional configs
-  max: 10, // max number of clients in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+    // // optional configs
+    // max: 10, // max number of clients in the pool
+    // idleTimeoutMillis: 30000,
+    // connectionTimeoutMillis: 2000,
 });
 
-// Optional: test connection
-pool.on("connect", () => {
-  console.log("Connected to PostgreSQL");
+pool.on('error', (err) => {
+    console.error('Lỗi kết nối Database bất ngờ:', err);
 });
 
-pool.on("error", (err) => {
-  console.error("Unexpected error on idle client", err);
-  process.exit(-1);
-});
-
-// Export pool to use in other files
 export default pool;

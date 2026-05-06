@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Wifi, ExternalLink, FileText, Terminal as TerminalIcon, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,7 @@ import { AppHeader } from '../../components/header.jsx';
 import { DashboardCard } from '../../helper/renderUI.js';
 import { TabItem, Table, THead } from '../../helper/renderUI.js';
 import { AlertCard } from '../../components/warning.jsx'
+import { io } from "socket.io-client";
 
 export default function AdminFleetView() {
   const router = useRouter();
@@ -19,6 +20,51 @@ export default function AdminFleetView() {
   // Future Plan feature
   const [search, setSearch] = useState('');
   const [appHeader, setAppHeader] = useState('security');
+
+  useEffect(() => {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+          router.push('/login');
+          return; 
+      }
+
+      try {
+          // Giải mã Token để đọc thông tin bên trong
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(atob(base64));
+
+          // Kiểm tra xem có phải Admin không 
+          if (payload._role !== 'admin' && payload.role !== 'admin') {
+              alert("BẠN KHÔNG CÓ QUYỀN TRUY CẬP VÀO KHU VỰC QUẢN TRỊ!");
+              router.push('/'); 
+          }
+
+          // ==========================================
+          // SOCKET PAGE ADMIN
+          // ==========================================
+          const socket = io('http://localhost:5000/ui', { 
+              auth: { token: token } 
+          });
+
+          socket.on("connect", () => {
+              console.log("🟢 [Admin UI] Đã kết nối Socket!");
+          });
+
+          socket.on("connect_error", (err) => {
+              console.error("🔴 [Admin UI] Lỗi Socket:", err.message);
+          });
+
+          return () => {
+              socket.disconnect();
+          };
+      } catch (error) {
+          console.error("Token bị lỗi hoặc bị ai đó sửa:", error);
+          localStorage.removeItem('token');
+          router.push('/login');
+      }
+  }, [router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">

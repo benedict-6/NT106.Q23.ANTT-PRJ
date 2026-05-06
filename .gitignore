@@ -2,9 +2,9 @@ test_agent/
 report/
 data/
 src/Server/.env
-dist/
+dist_agent/
 build/
 data/
-src/Server/node_modules/
 src/agents/socket_debug.go
 .env
+node_modules
