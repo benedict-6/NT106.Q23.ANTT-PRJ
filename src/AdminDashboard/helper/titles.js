@@ -10,4 +10,5 @@ export const headerTitle = [
     {route: "service/worker", title: ["Services", "List available servers & agents"]},
     {route: "account"       , title: ["Account", "User info"]},
     {route: "diary"         , title: ["Logs", "List log history"]},
+    {route: "blank"         , title: ["Nothing to show", "Download an agent to start"]},
 ]

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, Plus, Download, HelpCircle, ChevronRight } from 'lucide-react';
+import Link from 'next/link.js';
 
 import { topAgentsData, eventLocationData, criticalEvents, highEvents, locationItems } from '../helper/constant.js';
 import { drawPie } from '../chart/pie.js';

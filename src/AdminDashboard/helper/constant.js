@@ -55,8 +55,8 @@ export const locationItems = [
 export const mockData = {
   account: {
     user_id: 'root001',
-    username: 'K13T DU0N9',
-    password: 'muondoinhoonchutichHoChiMinh',
+    username: 'R00T U53R',
+    password: 'khonggiquyhondoclaptudo',
     role: 'root',
     created_at: '30-4-2026'
   },
