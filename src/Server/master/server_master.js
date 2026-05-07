@@ -2,7 +2,7 @@
 // SIEM Master Node — Entry Point
 // server.js chỉ khởi tạo và trỏ đến các route modules
 // ====================================================
-import { masterConfig } from "../shared/config/index.js";
+import { DB_config, masterConfig } from "../shared/config/index.js";
 import express from "express";
 import { createServer } from "http";
 import cors from "cors";
@@ -20,17 +20,12 @@ import agentRoutes from "./routes/agentRoutes.js";
 const app = express();
 const httpServer = createServer(app);
 
-// // Gọi hàm khởi tạo Socket
-// const io = initSocket(httpServer);
-// // Lưu io instance vào app để controller truy cập được
-// app.set('io', io);
-
 // // Middlewares
 app.use(cors());
 app.use(express.json());
 
 // Khởi động socket Master - Worker
-initSocket(masterConfig.port); 
+initSocket(masterConfig.port_socket);
 
 
 // Route Mounting — Mỗi nhóm chức năng là một file riêng
@@ -46,7 +41,7 @@ pool.query('SELECT NOW()', (err, res) => {
         process.exit(1);
     }
 
-    httpServer.listen(PORT, () => {
-        console.log(`Master Node đang chạy tại port ${PORT}`);
+    httpServer.listen(masterConfig.port, () => {
+        console.log(`Master Node đang chạy tại port ${masterConfig.port}`);
     });
 });

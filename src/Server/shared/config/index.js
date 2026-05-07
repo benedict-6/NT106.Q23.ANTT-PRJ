@@ -8,9 +8,9 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env")});
+dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
 
-if(!process.env.AES_MASTER_KEY){
+if (!process.env.AES_MASTER_KEY) {
 	throw new Error("Lỗi: chưa cấu hình master key cho AES");
 }
 export const masterkey = Buffer.from(process.env.AES_MASTER_KEY, 'hex')
@@ -22,7 +22,7 @@ export const DB_config = {
 	host: process.env.DB_HOST,
 	name: process.env.DB_NAME,
 	pass: process.env.DB_PASSWORD,
-	port: parseInt(process.env.DB_PORT || 5435)
+	port: parseInt(process.env.DB_PORT || 5432)
 }
 
 export const workerConfig = {
@@ -34,5 +34,6 @@ export const workerConfig = {
 }
 
 export const masterConfig = {
-	port: process.env.MASTER_PORT
+	port: process.env.MASTER_PORT,
+	port_socket: process.env.MASTER_SOCKET
 }

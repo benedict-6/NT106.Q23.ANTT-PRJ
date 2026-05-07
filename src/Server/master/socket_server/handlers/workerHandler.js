@@ -3,23 +3,25 @@
 // Websocket
 import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
-import { getAllRules } from "../services/ruleService.js";
+import { getAllRules } from "../services/ruleLoader.js";
 import pool from "../../../shared/database/connect.js";
 
-export 	const activeWorkers = new Map();
+export const activeWorkers = new Map();
 
 export default function initWorkerWebSocket(port) {
-	const wss = new WebSocketServer({ port});
+	const wss = new WebSocketServer({ port });
 
 	// Danh bạ lưu trữ các kết nối đang sống (Active connections)
 	// Key: worker_id, Value: WebSocket object
 	wss.on('connection', (ws, req) => {
-		console.log(`[+] Có một kết nối WebSocket mới... Đang chờ định danh.`);
-	
+		// Lấy IP của Worker từ request kết nối
+		const workerIp = req.socket.remoteAddress;
+		console.log(`[+] Có một kết nối WebSocket mới từ IP: ${workerIp}... Đang chờ định danh.`);
+
 		const authTimeout = setTimeout(() => {
 			console.log(`[!] Báo động: Kết nối từ ${workerIp} không chịu định danh. Đang hủy...`);
 			// Mã 4001: Lỗi tùy chỉnh báo hiệu hết thời gian xác thực
-			ws.close(4001, "Timeout: Không nhận được gói tin định danh"); 
+			ws.close(4001, "Timeout: Không nhận được gói tin định danh");
 		}, 5000);
 
 		ws.on('message', async (message) => {
@@ -27,7 +29,7 @@ export default function initWorkerWebSocket(port) {
 				const data = JSON.parse(message);
 				console.log(`Nhận được dữ liệu từ worker:`, data);
 
-				if(data.type == 'REGISTER_WORKER'){
+				if (data.type == 'REGISTER_WORKER') {
 					const workerID = data.worker_id;
 
 					if (!workerID) {
@@ -42,7 +44,16 @@ export default function initWorkerWebSocket(port) {
 
 					console.log(`[+] Worker [${workerID}] đã gia nhập mạng lưới. Tổng số Worker: ${activeWorkers.size}`);
 					ws.send(JSON.stringify({ type: 'WELCOME', message: 'Đăng ký thành công!' }));
-					return; 
+
+					// getAllRules() là hàm async, phải có await để đợi DB trả kết quả
+					const rules = await getAllRules();
+					ws.send(
+						JSON.stringify({
+							type: 'RULES',
+							message: rules
+						})
+					)
+					return;
 				}
 				if (!ws.workerID) {
 					console.warn(`[!] Máy lạ ${workerIp} đang cố gửi log trái phép. Đóng kết nối!`);
@@ -71,7 +82,7 @@ export default function initWorkerWebSocket(port) {
 
 				if (data.type === 'FIM_ALERT') {
 					console.log(`[Master] File ${data.payload.file_path} bị thay đổi! Đang xử lý...`);
-					
+
 					// Gửi thẳng cho tất cả các tab UI đang mở
 					const alertMessage = JSON.stringify({
 						type: 'FIM_ALERT_UI',
@@ -88,7 +99,7 @@ export default function initWorkerWebSocket(port) {
 					// });
 				}
 			}
-			catch(err){
+			catch (err) {
 				console.error('Lõi parse JSON từ worker:', err);
 			}
 		});
@@ -97,8 +108,9 @@ export default function initWorkerWebSocket(port) {
 			if (ws.workerID) {
 				activeWorkers.delete(ws.workerID);
 				console.log(`[-] Worker [${ws.workerID}] đã sập/ngắt kết nối. Còn lại: ${activeWorkers.size}`);
-			}    
+			}
 		});
+
 	});
 
 	console.log("Master Node WebSocket (Worker-Listener) chạy trên cổng 6000");
