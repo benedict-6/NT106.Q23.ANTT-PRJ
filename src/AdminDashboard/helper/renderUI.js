@@ -101,16 +101,17 @@ export const InputField = ({ label, placeholder, icon, type = "text", value, onC
         <label className="font-extrabold text-[18px] uppercase tracking-tight text-blue-500 group-focus-within:text-blue-400 transition-colors leading-none">{label}</label>
       </div>
       <div className="relative">
-        {icon && (<div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">{icon}</div>)}
+        {icon && (<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">{icon}</div>)}
         <input 
           type={type} 
           placeholder={placeholder}
-          value={value}      
-          onChange={onChange} 
           className={`w-full bg-black/50 border border-blue-500/40 hover:border-blue-500/40 focus:border-blue-500 focus:bg-blue-500/5 transition-all text-sm py-3.5 ${icon ? 'pl-11' : 'px-4'} pr-4 text-blue-100 placeholder:text-blue-900/30 focus:outline-none focus:ring-1 focus:ring-blue-500/10 rounded-none`}
           required
           autoComplete='off'
           maxLength={28}
+          spellCheck="false"
+          value={value}
+          onChange={onChange}
         />
         <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-blue-500 group-focus-within:w-full transition-all duration-500" />
       </div>
@@ -158,11 +159,11 @@ export const LogLine = ({ time, type, msg, glow = true }) => {
     CRITICAL: 'text-red-500',
   };
   return (
-    <div className={`flex items-start space-x-3 py-0.5 group ${(glow && type === 'CRITICAL') ? 'bg-red-500/5' : 'bg-yellow-100/5'}`}>
+    <div className={`hover:cursor-pointer flex items-start space-x-3 py-0.5 group ${(glow && type === 'CRITICAL') ? 'bg-red-150/5' : 'bg-yellow-100/5'}`}>
       <span className="text-gray-300 w-25 flex-shrink-0">[{time}]</span>
       <span className={`w-25 ${colors[type] || 'text-white'}`}>{type}</span>
       <span className={`flex-1 ${(glow && type === 'CRITICAL') ? 'text-red-400' : 'text-[#fef08a]'}`}>{msg}</span>
-      <ChevronRight size={10} className="text-gray-800 opacity-0 group-hover:opacity-100" />
+      <ChevronRight size={20} className="text-[#2563eb] opacity-0 group-hover:opacity-100" />
     </div>
   );
 }

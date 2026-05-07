@@ -19,7 +19,7 @@ export const AlertCard = () => {
                     <AlertTriangle size={16} className="text-red-500 animate-pulse" />
                     <span className="text-xs font-semibold text-red-400 uppercase">{e.priority_level}</span>
                 </div>
-                <button className='text-xs bg-red-500 hover:bg-red-400 text-black font-semibold py-1 px-4 border-b-4 border-red-700 hover:border-red-500 rounded'
+                <button className='hover:cursor-pointer text-xs bg-red-500 hover:bg-red-400 text-black font-semibold py-1 px-4 border-b-4 border-red-700 hover:border-red-500 rounded'
                     onClick={cleanThreat}>Purge</button>
             </div>
             <div className="flex-1 space-y-1 text-left">

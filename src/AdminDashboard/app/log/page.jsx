@@ -49,8 +49,8 @@ const LogContent = () => {
                 </div>
                     <div className="relative flex-1 overflow-y-auto p-4 font-mono text-base space-y-1">
                         {/* Background layer */}
-                        <div className="absolute inset-0 bg-[url('https://tinyurl.com/yncydvn5')] bg-cover bg-center bg-no-repeat opacity-20 blur-[2px]" />
-                        {/* Overlay màu theme */}
+                        <div className="absolute inset-0 bg-[url('https://tinyurl.com/yncydvn5')] bg-cover bg-center bg-no-repeat opacity-20 blur-[1px]" />
+                        {/* Overlay theme color */}
                         <div className="absolute inset-0 bg-[#0A0A0A]/80" />
                         {/* Content */}
                         <div className="relative z-10">
