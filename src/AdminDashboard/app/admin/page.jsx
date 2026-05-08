@@ -12,7 +12,6 @@ import { AppHeader } from '../../components/header.jsx';
 import { DashboardCard } from '../../helper/renderUI.js';
 import { TabItem, Table, THead } from '../../helper/renderUI.js';
 import { AlertCard } from '../../components/warning.jsx'
-import { io } from "socket.io-client";
 
 export default function AdminFleetView() {
   const router = useRouter();
@@ -20,6 +19,8 @@ export default function AdminFleetView() {
   // Future Plan feature
   const [search, setSearch] = useState('');
   const [appHeader, setAppHeader] = useState('security');
+
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
       const token = localStorage.getItem('token');
@@ -41,23 +42,34 @@ export default function AdminFleetView() {
               router.push('/'); 
           }
 
+          setIsAuthorized(true);
           // ==========================================
-          // SOCKET PAGE ADMIN
+          // NATIVE WEBSOCKET (PORT 6001)
           // ==========================================
-          const socket = io('http://localhost:5000/ui', { 
-              auth: { token: token } 
-          });
+          const ws = new WebSocket('ws://localhost:6001'); 
 
-          socket.on("connect", () => {
-              console.log("🟢 [Admin UI] Đã kết nối Socket!");
-          });
+          ws.onopen = () => {
+              console.log("[Admin Socket] WebSocket đã kết nối!");
+              ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
+          };
 
-          socket.on("connect_error", (err) => {
-              console.error("🔴 [Admin UI] Lỗi Socket:", err.message);
-          });
+          ws.onmessage = (event) => {
+              try {
+                  const data = JSON.parse(event.data);
+                  console.log("Dữ liệu từ Master:", data);
+                  if (data.type === 'FIM_ALERT_UI') {
+                      alert(`CẢNH BÁO: File ${data.payload.file_path} vừa bị sửa!`); 
+                  }
+              } catch (err) {
+                  console.error("Lỗi đọc dữ liệu Socket:", err);
+              }
+          };
+
+          ws.onerror = (error) => console.error("[Admin Socket] Lỗi WebSocket:", error);
+          ws.onclose = () => console.log("[Admin Socket] WebSocket đã đóng.");
 
           return () => {
-              socket.disconnect();
+              if (ws.readyState === 1) ws.close();
           };
       } catch (error) {
           console.error("Token bị lỗi hoặc bị ai đó sửa:", error);
@@ -65,6 +77,11 @@ export default function AdminFleetView() {
           router.push('/login');
       }
   }, [router]);
+
+  // BLOCK BEFORE REDERING PAGE
+  if (!isAuthorized) {
+    return <div className="flex h-screen items-center justify-center bg-[#0A0A0A] text-blue-500 font-mono animate-pulse">INITIALIZING SECURE CONNECTION...</div>;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">

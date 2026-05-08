@@ -11,6 +11,7 @@ import pool from "../shared/database/connect.js";
 
 // Import Socket
 import initWorkerWebSocket from './socket_server/handlers/workerHandler.js'
+import initUIWebSocket from "./socket_server/handlers/uiHandler.js";
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -20,11 +21,6 @@ import agentRoutes from "./routes/agentRoutes.js";
 // Khởi tạo Express
 const app = express();
 const httpServer = createServer(app);
-
-// // Gọi hàm khởi tạo Socket
-// const io = initSocket(httpServer);
-// // Lưu io instance vào app để controller truy cập được
-// app.set('io', io);
 
 // // Middlewares
 app.use(cors());
@@ -41,6 +37,8 @@ const PORT = masterConfig.port || 3000;
 
 // Khởi động socket Master - Worker
 initWorkerWebSocket(6000);
+
+initUIWebSocket(6001);
 
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {

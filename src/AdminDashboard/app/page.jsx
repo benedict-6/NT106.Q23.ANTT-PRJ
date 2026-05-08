@@ -14,7 +14,6 @@ import { processedEventLocationData } from '../helper/support.js';
 
 import { SideBar } from '../components/sidebar.jsx';
 import { AppHeader } from '../components/header.jsx';
-import { io } from "socket.io-client";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -48,28 +47,38 @@ export default function Dashboard() {
           setMounted(true); 
 
           // ==========================================
-          // KẾT NỐI SOCKET VIEWER
+          //  WEBSOCKET VIEWER
           // ==========================================
-          const socket = io('http://localhost:5000/ui', { 
-              auth: {
-                  token: token 
+          const ws = new WebSocket('ws://localhost:6001'); 
+
+          ws.onopen = () => {
+              console.log("[Viewer Socket] Native WebSocket đã kết nối!");
+              ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
+          };
+
+          ws.onmessage = (event) => {
+              try {
+                  const data = JSON.parse(event.data);
+                  console.log("Dữ liệu từ Master:", data);
+                  if (data.type === 'FIM_ALERT_UI') {
+                      alert(`CẢNH BÁO: File ${data.payload.file_path} vừa bị sửa!`); 
+                  }
+              } catch (err) {
+                  console.error("Lỗi đọc Socket:", err);
               }
-          });
+          };
 
-          socket.on("connect", () => {
-              console.log("🟢 [UI] Đã kết nối Socket bảo mật với Master Server!");
-          });
-
-          socket.on("connect_error", (err) => {
-              console.error("🔴 [UI] Lỗi Socket:", err.message);
-          });
+          ws.onerror = (error) => console.error("[Viewer Socket] Lỗi WebSocket:", error);
+          ws.onclose = () => console.log("[Viewer Socket] WebSocket đã đóng.");
 
           return () => {
-              socket.disconnect();
+              if (ws.readyState === 1) ws.close();
           };
         }
       } catch (e) {
-        setMounted(true);
+        console.error(e);
+        localStorage.removeItem('token');
+        router.push('/login');
       }
     }
   }, [router]);

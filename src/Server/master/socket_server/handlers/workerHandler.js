@@ -4,6 +4,7 @@
 import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
 import { getAllRules } from "../services/ruleService.js";
+import { activeUIs } from './uiHandler.js'
 import pool from "../../../shared/database/connect.js";
 
 export const activeWorkers = new Map();
@@ -83,9 +84,9 @@ export default function initWorkerWebSocket(port = 6000) {
 					});
 
 					//Giả sử gửi data lên UI
-					// activeUIs.forEach(uiClient => {
-					// 	if (uiClient.readyState === 1) uiClient.send(alertMessage);
-					// });
+					activeUIs.forEach(uiClient => {
+						if (uiClient.readyState === 1) uiClient.send(alertMessage);
+					});
 				}
 			}
 			catch (err) {
