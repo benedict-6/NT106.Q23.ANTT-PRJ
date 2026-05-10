@@ -10,7 +10,9 @@ import cors from "cors";
 import pool from "../shared/database/connect.js";
 
 // Import Socket
-import initSocket from "./socket_server/init_socket.js";
+import initWorkerWebSocket from './socket_server/handlers/workerHandler.js'
+import initUIWebSocket from "./socket_server/handlers/uiHandler.js";
+
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
 import dashRoutes from "./routes/dashRoutes.js";
@@ -34,6 +36,8 @@ app.use('/api/dashboard', dashRoutes);      // Quản lý Agent
 app.use('/api/agent', agentRoutes);         // Giao tiếp Agent 
 
 
+
+initUIWebSocket(6001);
 
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {

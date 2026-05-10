@@ -62,7 +62,7 @@ export default function LoginPage(){
                   }
               } catch (decodeError) {
                   console.error("Lỗi giải mã token:", decodeError);
-                  router.push('/'); 
+                  router.push('/login'); 
               }
           } else {
               setErrorMsg(data.message || 'Đăng nhập thất bại!');
