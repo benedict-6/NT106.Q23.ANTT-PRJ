@@ -2,7 +2,7 @@
 // SIEM Master Node — Entry Point
 // server.js chỉ khởi tạo và trỏ đến các route modules
 // ====================================================
-import { masterConfig } from "../shared/config/index.js";
+import { DB_config, masterConfig } from "../shared/config/index.js";
 import express from "express";
 import { createServer } from "http";
 import cors from "cors";
@@ -11,6 +11,7 @@ import pool from "../shared/database/connect.js";
 
 // Import Socket
 import initWorkerWebSocket from './socket_server/handlers/workerHandler.js'
+import initUIWebSocket from "./socket_server/handlers/uiHandler.js";
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -21,14 +22,13 @@ import agentRoutes from "./routes/agentRoutes.js";
 const app = express();
 const httpServer = createServer(app);
 
-// // Gọi hàm khởi tạo Socket
-// const io = initSocket(httpServer);
-// // Lưu io instance vào app để controller truy cập được
-// app.set('io', io);
-
 // // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Khởi động socket Master - Worker
+initSocket(masterConfig.port_socket);
+
 
 // Route Mounting — Mỗi nhóm chức năng là một file riêng
 app.use('/api/auth', authRoutes);           // Đăng ký / Đăng nhập UI
@@ -36,11 +36,8 @@ app.use('/api/dashboard', dashRoutes);      // Quản lý Agent
 app.use('/api/agent', agentRoutes);         // Giao tiếp Agent 
 
 
-// Khởi động Server
-const PORT = masterConfig.port || 3000;
 
-// Khởi động socket Master - Worker
-initWorkerWebSocket(6000);
+initUIWebSocket(6001);
 
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
@@ -48,7 +45,7 @@ pool.query('SELECT NOW()', (err, res) => {
         process.exit(1);
     }
 
-    httpServer.listen(PORT, () => {
-        console.log(`Master Node đang chạy tại port ${PORT}`);
+    httpServer.listen(masterConfig.port, () => {
+        console.log(`Master Node đang chạy tại port ${masterConfig.port}`);
     });
 });

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect  } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Wifi, ExternalLink, FileText, Terminal as TerminalIcon, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Link from 'next/link.js';
 
 import { mockData } from '../../helper/constant';
 import { SideBar } from '../../components/sidebar.jsx';
@@ -11,7 +12,6 @@ import { AppHeader } from '../../components/header.jsx';
 import { DashboardCard } from '../../helper/renderUI.js';
 import { TabItem, Table, THead } from '../../helper/renderUI.js';
 import { AlertCard } from '../../components/warning.jsx'
-import { io } from "socket.io-client";
 
 export default function AdminFleetView() {
   const router = useRouter();
@@ -19,6 +19,8 @@ export default function AdminFleetView() {
   // Future Plan feature
   const [search, setSearch] = useState('');
   const [appHeader, setAppHeader] = useState('security');
+
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
       const token = localStorage.getItem('token');
@@ -40,23 +42,34 @@ export default function AdminFleetView() {
               router.push('/'); 
           }
 
+          setIsAuthorized(true);
           // ==========================================
-          // SOCKET PAGE ADMIN
+          // NATIVE WEBSOCKET (PORT 6001)
           // ==========================================
-          const socket = io('http://localhost:5000/ui', { 
-              auth: { token: token } 
-          });
+          const ws = new WebSocket('ws://localhost:6001'); 
 
-          socket.on("connect", () => {
-              console.log("🟢 [Admin UI] Đã kết nối Socket!");
-          });
+          ws.onopen = () => {
+              console.log("[Admin Socket] WebSocket đã kết nối!");
+              ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
+          };
 
-          socket.on("connect_error", (err) => {
-              console.error("🔴 [Admin UI] Lỗi Socket:", err.message);
-          });
+          ws.onmessage = (event) => {
+              try {
+                  const data = JSON.parse(event.data);
+                  console.log("Dữ liệu từ Master:", data);
+                  if (data.type === 'FIM_ALERT_UI') {
+                      alert(`CẢNH BÁO: File ${data.payload.file_path} vừa bị sửa!`); 
+                  }
+              } catch (err) {
+                  console.error("Lỗi đọc dữ liệu Socket:", err);
+              }
+          };
+
+          ws.onerror = (error) => console.error("[Admin Socket] Lỗi WebSocket:", error);
+          ws.onclose = () => console.log("[Admin Socket] WebSocket đã đóng.");
 
           return () => {
-              socket.disconnect();
+              if (ws.readyState === 1) ws.close();
           };
       } catch (error) {
           console.error("Token bị lỗi hoặc bị ai đó sửa:", error);
@@ -64,6 +77,11 @@ export default function AdminFleetView() {
           router.push('/login');
       }
   }, [router]);
+
+  // BLOCK BEFORE REDERING PAGE
+  if (!isAuthorized) {
+    return <div className="flex h-screen items-center justify-center bg-[#0A0A0A] text-blue-500 font-mono animate-pulse">INITIALIZING SECURE CONNECTION...</div>;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">
@@ -201,16 +219,18 @@ export default function AdminFleetView() {
                               {log.change_type}
                             </span>
                           </td>
-                          <td className="py-3 text-white-500">{log.old_hash || "*******"}</td>
-                          <td className="py-3 text-white-600">{log.new_hash || "*******"}</td>
+                          <td className="py-3 text-white-500">{log.old_hash || "•••••••"}</td>
+                          <td className="py-3 text-white-600">{log.new_hash || "•••••••"}</td>
                           <td className="py-3 text-[#e11d48]">{log.permission}</td>
                           <td className="py-3 px-5 text-gray-600">{log.created_at || "???"}</td>
                           <td className="py-3 text-right">
-                            <button onClick={() => router.push(`/log?id=${i}`)}
-                                    className="bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95">
-                              <ExternalLink size={14} />
-                              <span>Detail</span>
-                            </button>
+                            <Link 
+                                href={`/log?id=${i}`}
+                                className="hover:cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95"
+                              >
+                                <ExternalLink size={14} />
+                                <span>Detail</span>
+                            </Link>
                           </td>
                         </tr>
                       ))}
