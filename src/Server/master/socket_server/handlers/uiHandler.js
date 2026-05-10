@@ -1,5 +1,7 @@
 import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
+//websocket
+export function registerUIHandlers(io, socket) {
 
 // Danh bạ lưu các kết nối UI đang sống (Active UIs)
 export const activeUIs = new Set(); 

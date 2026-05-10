@@ -9,13 +9,15 @@ import pool from "../../../shared/database/connect.js";
 
 export const activeWorkers = new Map();
 
-export default function initWorkerWebSocket(port = 6000) {
+export default function initWorkerWebSocket(port) {
 	const wss = new WebSocketServer({ port });
 
 	// Danh bạ lưu trữ các kết nối đang sống (Active connections)
 	// Key: worker_id, Value: WebSocket object
 	wss.on('connection', (ws, req) => {
-		console.log(`[+] Có một kết nối WebSocket mới... Đang chờ định danh.`);
+		// Lấy IP của Worker từ request kết nối
+		const workerIp = req.socket.remoteAddress;
+		console.log(`[+] Có một kết nối WebSocket mới từ IP: ${workerIp}... Đang chờ định danh.`);
 
 		const authTimeout = setTimeout(() => {
 			console.log(`[!] Báo động: Kết nối từ ${workerIp} không chịu định danh. Đang hủy...`);
@@ -43,6 +45,15 @@ export default function initWorkerWebSocket(port = 6000) {
 
 					console.log(`[+] Worker [${workerID}] đã gia nhập mạng lưới. Tổng số Worker: ${activeWorkers.size}`);
 					ws.send(JSON.stringify({ type: 'WELCOME', message: 'Đăng ký thành công!' }));
+
+					// getAllRules() là hàm async, phải có await để đợi DB trả kết quả
+					const rules = await getAllRules();
+					ws.send(
+						JSON.stringify({
+							type: 'RULES',
+							message: rules
+						})
+					)
 					return;
 				}
 				if (!ws.workerID) {
@@ -100,6 +111,7 @@ export default function initWorkerWebSocket(port = 6000) {
 				console.log(`[-] Worker [${ws.workerID}] đã sập/ngắt kết nối. Còn lại: ${activeWorkers.size}`);
 			}
 		});
+
 	});
 
 	console.log("Master Node WebSocket (Worker-Listener) chạy trên cổng 6000");
