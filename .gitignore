@@ -5,6 +5,11 @@ src/Server/.env
 dist_agent/
 build/
 data/
+<<<<<<< HEAD
+src/Server/master/node_modules/
+src/Server/node_modules/
+=======
+>>>>>>> 5af7ef5391c11d7191d20b4a0d74376866337454
 src/agents/socket_debug.go
 .env
 node_modules
