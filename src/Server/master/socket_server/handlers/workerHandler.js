@@ -3,13 +3,11 @@
 // Websocket
 import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
-import { getAllRules } from "../services/ruleService.js";
-import { activeUIs } from './uiHandler.js'
-import pool from "../../../shared/database/connect.js";
+import { getAllRules } from "../services/ruleLoader.js";
 
 export const activeWorkers = new Map();
 
-export default function initWorkerWebSocket(port) {
+export default function WebsocketHandler(port) {
 	const wss = new WebSocketServer({ port });
 
 	// Danh bạ lưu trữ các kết nối đang sống (Active connections)
@@ -70,10 +68,7 @@ export default function initWorkerWebSocket(port) {
 				if (data.type === 'UPDATE_LAST_ACTIVE') {
 					try {
 						const { agent_id } = data.payload;
-						await pool.query(
-							"UPDATE agents SET last_active = NOW() WHERE agent_id = $1",
-							[agent_id]
-						);
+						await updateLastActive(agent_id);
 						// console.log(`[Master] Cập nhật last_active cho Agent [${agent_id}] thành công.`);
 					} catch (err) {
 						console.error(`[Master] Lỗi cập nhật last_active cho Agent:`, err.message);

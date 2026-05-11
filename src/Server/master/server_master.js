@@ -10,8 +10,7 @@ import cors from "cors";
 import pool from "../shared/database/connect.js";
 
 // Import Socket
-import initWorkerWebSocket from './socket_server/handlers/workerHandler.js'
-import initUIWebSocket from "./socket_server/handlers/uiHandler.js";
+import initSocket from './socket_server/init_socket.js';
 
 // Import Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -26,18 +25,14 @@ const httpServer = createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// Khởi động socket Master - Worker
-initSocket(masterConfig.port_socket);
+// Khởi động các WebSockets
+initSocket(process.env.PORT_SOCKET_WORKER || 6000, process.env.PORT_SOCKET_UI || 6001);
 
 
 // Route Mounting — Mỗi nhóm chức năng là một file riêng
 app.use('/api/auth', authRoutes);           // Đăng ký / Đăng nhập UI
 app.use('/api/dashboard', dashRoutes);      // Quản lý Agent
 app.use('/api/agent', agentRoutes);         // Giao tiếp Agent 
-
-
-
-initUIWebSocket(6001);
 
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {

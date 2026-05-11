@@ -1,8 +1,15 @@
-import initMasterWebSocket from "./handlers/handlerMasterSocket.js";
-import initAgentListener from "./handlers/handlerAgentSocket.js";
+// khởi tạo và inject service và attach handler
 
-export default function InitSocket(url, port) {
-	const masterWs = initMasterWebSocket(url);
-	initAgentListener(port, masterWs);
+import WebSocket from "ws";
+import registerMasterHandler from './handlers/handlerMasterSocket.js'
+import { setMasterSocket } from "./services/serviceMasterSocket.js";
 
+export default function InitSocket(url) {
+	const ws = new WebSocket(url); // tạo websocket
+
+	setMasterSocket(ws); // inject service
+
+	registerMasterHandler(ws); // attach handler
+
+	return ws;
 }

@@ -1,4 +1,5 @@
 import pool from "../../../shared/database/connect.js";
+import fs from "fs";
 
 
 export async function getAllRules() {
@@ -22,11 +23,11 @@ export async function getAllRules() {
         }
         else {
             console.log(`[Master] Không tìm thấy rule`);
-            return null;
+            return [];
         }
     } catch (error) {
         console.error("[Master] Lỗi khi tải rules:", error.message);
-        return null;
+        return [];
     }
 
 }
@@ -38,7 +39,7 @@ export const loadRulesFromFile = (filePath) => {
         const ruleConfig = JSON.parse(rawRules);
 
         // Lọc ra các rules có "enabled": true
-        activeRules = ruleConfig.detection_rules.filter(rule => rule.enabled); // rule.enabled == true
+        const activeRules = ruleConfig.detection_rules.filter(rule => rule.enabled); // rule.enabled == true
 
         console.log(`[RuleMatcher] Đã tải ${activeRules.length} rules.`);
     } catch (error) {
