@@ -1,15 +1,12 @@
-import WebSocket, { WebSocketServer } from 'ws';
+// Dùng để xử lý các event của socket, event khác với các hành động
+
 import { workerConfig } from '../../../shared/config/index.js';
 import { parseRule } from '../../engine/ruleMatcher.js';
 
-let socketInstance = null;
+import { sendToMaster } from '../services/serviceMasterSocket.js';
 
-export default function initMasterWebSocket(url = 'ws://localhost:6000') {
+export default function registerMasterHandler(ws) {
 	const MY_WORKER_ID = workerConfig.ID1 || `WORKER-${Math.floor(Math.random() * 1000)}`;
-
-	const ws = new WebSocket(url);
-
-	socketInstance = ws;
 
 	ws.on('open', () => {
 		console.log('[+] Đã kết nối tới Master Node! Đang định danh..');
@@ -41,22 +38,9 @@ export default function initMasterWebSocket(url = 'ws://localhost:6000') {
 
 	ws.on('error', (error) => {
 		console.error('[!] Lỗi kết nối WebSocket:', error.message);
-		socketInstance = null;
 	});
 
 	ws.on('close', () => {
 		console.log('[-] Kết nối tới Master đã bị đóng');
-		socketInstance = null;
 	})
-
-	return ws;
-}
-
-export function sendToMaster(msg) {
-	if (socketInstance && socketInstance.readyState === 1) {
-		socketInstance.send(JSON.stringify(msg));
-	}
-	else {
-		console.error("[Master] Server chưa sẵn sàng!")
-	}
 }

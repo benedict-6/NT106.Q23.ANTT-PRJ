@@ -2,9 +2,6 @@
 import express from 'express';
 import agentController from '../controllers/agentAuthController.js';
 
-
-import verifyAgentSession from '../../shared/middlewares/handshakeAgent.js';
-
 const router = express.Router();
 
 // POST /api/agent/handshake — Agent gửi tín hiệu xác thực HMAC-SHA256

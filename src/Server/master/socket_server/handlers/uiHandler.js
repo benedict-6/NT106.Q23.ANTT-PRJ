@@ -1,12 +1,11 @@
 import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
 //websocket
-export function registerUIHandlers(io, socket) {
 
 // Danh bạ lưu các kết nối UI đang sống (Active UIs)
-export const activeUIs = new Set(); 
+export const activeUIs = new Set();
 
-export default function initUIWebSocket(port = 6001) {
+export default function UIHandler(port) {
     const wss = new WebSocketServer({ port });
 
     wss.on('connection', (ws, req) => {
@@ -25,7 +24,7 @@ export default function initUIWebSocket(port = 6001) {
                 // ĐĂNG KÝ
                 if (data.type === 'REGISTER_UI') {
                     const token = data.token;
-                    
+
                     if (!token) {
                         ws.close(4003, "Forbidden: Thiếu Token");
                         return;

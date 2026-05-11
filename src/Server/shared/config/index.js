@@ -30,10 +30,11 @@ export const workerConfig = {
 	ID2: process.env.Worker2,
 	ID3: process.env.Worker3,
 	ID4: process.env.Worker4,
-	port: process.env.WORKER_PORT
+	port: process.env.PORT_WORKER1 || 4001,
+	masterWS: process.env.URL_MASTER_SOCKET || 'ws://localhost:6000'
 }
 
 export const masterConfig = {
-	port: process.env.MASTER_PORT,
-	port_socket: process.env.MASTER_SOCKET
+	port: process.env.PORT_MASTER || 3000,
+	port_socket: process.env.MASTER_SOCKET || 6000
 }
