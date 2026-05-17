@@ -2,7 +2,7 @@
 // Agent gửi session_token trong header Authorization sau khi handshake thành công
 
 import jwt from 'jsonwebtoken';
-import { sendToMaster } from '../socket_client/handlers/handlerMasterSocket.js';
+import { sendToMaster } from '../socket_client/services/serviceMasterSocket.js';
 
 const verifyAgentSession = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
