@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
-//websocket
+import { getDashboardOverview } from '../services/dashboardService.js';
 
 // Danh bạ lưu các kết nối UI đang sống (Active UIs)
 export const activeUIs = new Set();
@@ -17,7 +17,7 @@ export default function UIHandler(port) {
         }, 5000);
 
         // LISTEN
-        ws.on('message', (message) => {
+        ws.on('message', async (message) => {
             try {
                 const data = JSON.parse(message);
 
@@ -45,8 +45,28 @@ export default function UIHandler(port) {
                     }
                     return;
                 }
+
+                // UI YÊU CẦU LẤY DỮ LIỆU TỔNG QUAN
+                if (data.type === 'FETCH_DASHBOARD_DATA') {
+                    if (!ws.user) {
+                        ws.send(JSON.stringify({ type: 'ERROR', message: 'Bạn chưa xác thực!' }));
+                        return;
+                    }
+
+                    try {
+                        const dashboardData = await getDashboardOverview();
+                        ws.send(JSON.stringify({
+                            type: 'DASHBOARD_DATA_RESPONSE',
+                            payload: dashboardData
+                        }));
+                    } catch (err) {
+                        ws.send(JSON.stringify({ type: 'ERROR', message: 'Lỗi khi tải dữ liệu thống kê từ DB.' }));
+                    }
+                    return;
+                }
+
             } catch (err) {
-                console.error('Lỗi parse JSON từ UI:', err);
+                console.error('Lỗi parse JSON hoặc xử lý request từ UI:', err);
             }
         });
 

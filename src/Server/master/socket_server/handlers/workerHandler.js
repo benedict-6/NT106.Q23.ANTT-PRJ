@@ -4,6 +4,7 @@
 import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
 import { getAllRules } from "../services/ruleLoader.js";
+import { activeUIs } from "./uiHandler.js";
 
 export const activeWorkers = new Map();
 
@@ -69,30 +70,49 @@ export default function WebsocketHandler(port) {
 					try {
 						const { agent_id } = data.payload;
 						await updateLastActive(agent_id);
-						// console.log(`[Master] Cập nhật last_active cho Agent [${agent_id}] thành công.`);
+
+						// Chuyển tiếp trạng thái online lên UI nếu có UI đang mở
+						if (activeUIs && activeUIs.size > 0) {
+							const statusMessage = JSON.stringify({
+								type: 'AGENT_STATUS_UPDATE',
+								agent_id: agent_id,
+								status: 'online',
+								last_active: new Date().toISOString()
+							});
+							activeUIs.forEach(uiClient => {
+								if (uiClient.readyState === 1) {
+									uiClient.send(statusMessage);
+								}
+							});
+						}
 					} catch (err) {
 						console.error(`[Master] Lỗi cập nhật last_active cho Agent:`, err.message);
 					}
 					return;
 				}
 
-				if (data.type === 'FIM_ALERT') {
-					console.log(`[Master] File ${data.payload.file_path} bị thay đổi! Đang xử lý...`);
+				if (data.type === 'RULE_ALERT') {
+					console.log(`[Master] Nhận cảnh báo từ Agent [${data.agent_id}]! Đang kiểm tra để chuyển tiếp cho UI...`);
 
-					// Gửi thẳng cho tất cả các tab UI đang mở
-					const alertMessage = JSON.stringify({
-						type: 'FIM_ALERT_UI',
-						payload: {
-							level: 'CRITICAL',
-							...data.payload, // bung toàn bộ agent_id, file_path, hashes ra
-							time: new Date()
-						}
-					});
+					// Chỉ xử lý chuyển tiếp nếu có UI đang kết nối
+					if (activeUIs && activeUIs.size > 0) {
+						// Đóng gói gói tin chuẩn (không bung data payload để tránh hỏng dữ liệu gốc)
+						const alertMessage = JSON.stringify({
+							type: 'NEW_ALERT_UI',
+							agent_id: data.agent_id,
+							payload: data.payload,
+							time: new Date().toISOString()
+						});
 
-					//Giả sử gửi data lên UI
-					// activeUIs.forEach(uiClient => {
-					// 	if (uiClient.readyState === 1) uiClient.send(alertMessage);
-					// });
+						// Gửi data lên UI
+						activeUIs.forEach(uiClient => {
+							if (uiClient.readyState === 1) {
+								uiClient.send(alertMessage);
+							}
+						});
+					} else {
+						// console.log(`[Master] Bỏ qua chuyển tiếp do không có UI nào đang kết nối.`);
+					}
 				}
 			}
 			catch (err) {
