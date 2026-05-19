@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect  } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Wifi, ExternalLink, FileText, Terminal as TerminalIcon, Apple } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,60 +22,100 @@ export default function AdminFleetView() {
 
   const [isAuthorized, setIsAuthorized] = useState(false);
 
+  // Bộ nhớ tạm chứa dữ liệu thật nhận từ Master Server
+  const [realData, setRealData] = useState({
+    agents: [],
+    recentAlerts: [],
+    totalAlerts: 0
+  });
+
   useEffect(() => {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-          router.push('/login');
-          return; 
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      // Giải mã Token để đọc thông tin bên trong
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
+
+      // Kiểm tra xem có phải Admin không 
+      if (payload.role !== 'admin') {
+        alert("BẠN KHÔNG CÓ QUYỀN TRUY CẬP VÀO KHU VỰC QUẢN TRỊ!");
+        router.push('/');
       }
 
-      try {
-          // Giải mã Token để đọc thông tin bên trong
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const payload = JSON.parse(atob(base64));
+      setIsAuthorized(true);
+      // ==========================================
+      // NATIVE WEBSOCKET (PORT 6001)
+      // ==========================================
+      const ws = new WebSocket('ws://localhost:6001');
 
-          // Kiểm tra xem có phải Admin không 
-          if (payload._role !== 'admin' && payload.role !== 'admin') {
-              alert("BẠN KHÔNG CÓ QUYỀN TRUY CẬP VÀO KHU VỰC QUẢN TRỊ!");
-              router.push('/'); 
+      ws.onopen = () => {
+        console.log("[Admin Socket] WebSocket đã kết nối!");
+        ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("Dữ liệu từ Master:", data);
+
+          // 1. Xác thực thành công -> Lập tức yêu cầu Master gửi data DB
+          if (data.type === 'WELCOME') {
+            ws.send(JSON.stringify({ type: 'FETCH_DASHBOARD_DATA' }));
           }
 
-          setIsAuthorized(true);
-          // ==========================================
-          // NATIVE WEBSOCKET (PORT 6001)
-          // ==========================================
-          const ws = new WebSocket('ws://localhost:6001'); 
+          // 2. Hứng dữ liệu tổng quan từ Database trả về
+          if (data.type === 'DASHBOARD_DATA_RESPONSE') {
+            setRealData(data.payload);
+          }
 
-          ws.onopen = () => {
-              console.log("[Admin Socket] WebSocket đã kết nối!");
-              ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
-          };
+          // 3. Hứng cảnh báo thời gian thực (Real-time Alert)
+          if (data.type === 'NEW_ALERT_UI') {
+            // Hiển thị popup hoặc thông báo
+            alert(`[CẢNH BÁO TỪ AGENT ${data.agent_id}]: ${data.payload.rule_name || 'Phát hiện bất thường!'}`);
 
-          ws.onmessage = (event) => {
-              try {
-                  const data = JSON.parse(event.data);
-                  console.log("Dữ liệu từ Master:", data);
-                  if (data.type === 'FIM_ALERT_UI') {
-                      alert(`CẢNH BÁO: File ${data.payload.file_path} vừa bị sửa!`); 
-                  }
-              } catch (err) {
-                  console.error("Lỗi đọc dữ liệu Socket:", err);
-              }
-          };
+            // Tự động thêm alert mới vào đầu danh sách recentAlerts
+            setRealData(prev => ({
+              ...prev,
+              recentAlerts: [data.payload, ...prev.recentAlerts].slice(0, 50),
+              totalAlerts: prev.totalAlerts + 1
+            }));
+          }
 
-          ws.onerror = (error) => console.error("[Admin Socket] Lỗi WebSocket:", error);
-          ws.onclose = () => console.log("[Admin Socket] WebSocket đã đóng.");
+          // 4. Hứng tín hiệu Agent Online (Heartbeat)
+          if (data.type === 'AGENT_STATUS_UPDATE') {
+            setRealData(prev => ({
+              ...prev,
+              agents: prev.agents.map(agent =>
+                agent.agent_id === data.agent_id
+                  ? { ...agent, agent_status: data.status, last_active: data.last_active }
+                  : agent
+              )
+            }));
+          }
 
-          return () => {
-              if (ws.readyState === 1) ws.close();
-          };
-      } catch (error) {
-          console.error("Token bị lỗi hoặc bị ai đó sửa:", error);
-          localStorage.removeItem('token');
-          router.push('/login');
-      }
+        } catch (err) {
+          console.error("Lỗi đọc dữ liệu Socket:", err);
+        }
+      };
+
+      ws.onerror = (error) => console.error("[Admin Socket] Lỗi WebSocket:", error);
+      ws.onclose = () => console.log("[Admin Socket] WebSocket đã đóng.");
+
+      return () => {
+        if (ws.readyState === 1) ws.close();
+      };
+    } catch (error) {
+      console.error("Token bị lỗi: ", error);
+      localStorage.removeItem('token');
+      router.push('/login');
+    }
   }, [router]);
 
   // BLOCK BEFORE REDERING PAGE
@@ -85,18 +125,18 @@ export default function AdminFleetView() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">
-      <SideBar/>
+      <SideBar />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <AppHeader route={appHeader}/>
+        <AppHeader route={appHeader} />
 
         {/* Tab Navigation Rail */}
         <div className="bg-[#111111] border-b border-[#2A2A2A] px-6 py-3 flex items-center space-x-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-          <TabItem active={activeTab === 'users'}   onClick={() => {setActiveTab('users');   setAppHeader('security/user')}} icon={<Users size={16} />}        label="Identity" />
-          <TabItem active={activeTab === 'apps'}    onClick={() => {setActiveTab('apps');    setAppHeader('security/apps')}} icon={<Apple size={16} />}        label="Application" />
-          <TabItem active={activeTab === 'process'} onClick={() => {setActiveTab('process'); setAppHeader('security/proc')}} icon={<TerminalIcon size={16} />} label="Process" />
-          <TabItem active={activeTab === 'network'} onClick={() => {setActiveTab('network'); setAppHeader('security/nets')}} icon={<Wifi size={16} />}         label="Network Log" />
-          <TabItem active={activeTab === 'file'}    onClick={() => {setActiveTab('file');    setAppHeader('security/file')}} icon={<FileText size={16} />}     label="File Log" />
+          <TabItem active={activeTab === 'users'} onClick={() => { setActiveTab('users'); setAppHeader('security/user') }} icon={<Users size={16} />} label="Identity" />
+          <TabItem active={activeTab === 'apps'} onClick={() => { setActiveTab('apps'); setAppHeader('security/apps') }} icon={<Apple size={16} />} label="Application" />
+          <TabItem active={activeTab === 'process'} onClick={() => { setActiveTab('process'); setAppHeader('security/proc') }} icon={<TerminalIcon size={16} />} label="Process" />
+          <TabItem active={activeTab === 'network'} onClick={() => { setActiveTab('network'); setAppHeader('security/nets') }} icon={<Wifi size={16} />} label="Network Log" />
+          <TabItem active={activeTab === 'file'} onClick={() => { setActiveTab('file'); setAppHeader('security/file') }} icon={<FileText size={16} />} label="File Log" />
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#0A0A0A] relative">
@@ -214,8 +254,8 @@ export default function AdminFleetView() {
                           <td className="py-3 text-gray-300 truncate max-w-xs">{log.file_path}</td>
                           <td className="py-3">
                             <span className={`font-bold uppercase px-1.5 py-0.5 rounded 
-                              ${log.change_type === 'Modified' ? 'text-yellow-500 bg-orange-500/5' : (log.change_type === 'Deleted')?
-                                  'text-red-500 bg-red-500/5' : 'text-green-500 bg-green-500/5'}`}>
+                              ${log.change_type === 'Modified' ? 'text-yellow-500 bg-orange-500/5' : (log.change_type === 'Deleted') ?
+                                'text-red-500 bg-red-500/5' : 'text-green-500 bg-green-500/5'}`}>
                               {log.change_type}
                             </span>
                           </td>
@@ -224,12 +264,12 @@ export default function AdminFleetView() {
                           <td className="py-3 text-[#e11d48]">{log.permission}</td>
                           <td className="py-3 px-5 text-gray-600">{log.created_at || "???"}</td>
                           <td className="py-3 text-right">
-                            <Link 
-                                href={`/log?id=${i}`}
-                                className="hover:cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95"
-                              >
-                                <ExternalLink size={14} />
-                                <span>Detail</span>
+                            <Link
+                              href={`/log?id=${i}`}
+                              className="hover:cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-2 py-1 rounded text-sm font-bold uppercase flex items-center space-x-1 ml-auto border border-blue-500/20 transition-all active:scale-95"
+                            >
+                              <ExternalLink size={14} />
+                              <span>Detail</span>
                             </Link>
                           </td>
                         </tr>
@@ -241,7 +281,7 @@ export default function AdminFleetView() {
             )}
           </AnimatePresence>
           {/* ALERT CARD AT THE BOTTOM */}
-          <AlertCard/>
+          <AlertCard />
         </div>
       </main>
     </div>

@@ -2,29 +2,12 @@
 // Não bộ của Worker (Xử lý và So khớp)
 // Core logic so khớp sự kiện với Rules
 // src/Server/worker/engine/ruleMatcher.js
-import fs from 'fs';
-import path from 'path';
 
-// Danh sách các Rule đang được kích hoạt (Sau này Master sẽ cập nhật mảng này qua Socket)
-let activeRules = [];
+import { activeRules } from "./parser.js";
+import { sendSocketAlert, sendEmailAlert } from "../actions/alerter.js";
 
 // Bộ nhớ đệm lưu trữ trạng thái (State) cho các rule cần đếm theo thời gian (Threshold)
 const thresholdCache = {};
-
-// Dùng để nạp rules vào RAM từ Master Node
-export const parseRule = (rulesArray) => {
-    try {
-        // Master đã filter và trả về mảng rules
-        if (Array.isArray(rulesArray)) {
-            activeRules = rulesArray;
-            console.log(`[Worker] Đã nạp thành công ${activeRules.length} rules vào RAM.`);
-        } else {
-            console.error("[Worker] Dữ liệu rules từ Master không phải là một mảng hợp lệ!");
-        }
-    } catch (error) {
-        console.error("[Worker] Lỗi khi nạp rule vào RAM:", error.message);
-    }
-};
 
 /**
  * @param {any} dataValue dữ liệu thực tế nhận từ file
@@ -47,8 +30,12 @@ const evaluateCondition = (dataValue, operator, ruleValue) => {
     switch (operator) {
         case 'equals':
             return dataValue === ruleValue;
+        case 'not_equals':
+            return dataValue !== ruleValue;
         case 'in':
             return Array.isArray(ruleValue) && ruleValue.includes(dataValue);
+        case 'not_in':
+            return Array.isArray(ruleValue) && !ruleValue.includes(dataValue);
         case 'contains':
             return String(dataValue).includes(String(ruleValue));
         case 'regex':
@@ -142,7 +129,9 @@ export const evaluateData = (parsedData) => {
     //Duyet qua tung rule
     for (const rule of activeRules) {
         // 1. Bỏ qua nếu không đúng data_type
-        if (rule.data_type && rule.data_type !== parsedData.data_type) continue;
+        const ruleType = rule.type || rule.data_type;
+        const dataType = parsedData.type || parsedData.data_type;
+        if (ruleType && ruleType !== dataType) continue;
 
         // 2. Kiểm tra danh sách conditions (Tất cả condition phải ĐÚNG - AND logic)
         let isMatch = true;
@@ -154,7 +143,7 @@ export const evaluateData = (parsedData) => {
                 break;
             }
         }
-
+        let alertTriggered = false;
         // 3. nếu khớp, tiếp tục check Threshold
         if (isMatch) {
             // Đối với rule cần đếm
@@ -162,26 +151,48 @@ export const evaluateData = (parsedData) => {
                 // Kiểm tra xem liệu có vượt ngưỡng
                 const thresholdTrigger = checkThreshold(rule, parsedData.payload, parsedData.agent_id);
                 if (thresholdTrigger) {
-                    triggeredAlerts.push({
+                    const alertDetail = {
+                        agent_id: parsedData.agent_id,
+                        type: parsedData.type,
                         rule_id: rule.rule_id,
                         rule_name: rule.rule_name,
                         packet_level: rule.packet_level,
                         category: rule.category,
-                        timestamp: new Date().toISOString()
-                    });
+                        payload: parsedData.payload
+                    };
+                    triggeredAlerts.push(alertDetail);
+
+                    if (rule.packet_level >= 10) {
+                        // gọi hành động alerter gửi lên socket và gửi về gmail
+                        sendSocketAlert(alertDetail);
+                        sendEmailAlert(alertDetail);
+                        alertTriggered = true;
+                    }
+                    return { triggeredAlerts, alertObj: alertTriggered };
                 }
             } else {
                 // Rule thông thường (không cần threshold)
-                triggeredAlerts.push({
+                const alertDetail = {
+                    agent_id: parsedData.agent_id,
+                    type: parsedData.type,
                     rule_id: rule.rule_id,
                     rule_name: rule.rule_name,
                     packet_level: rule.packet_level,
                     category: rule.category,
-                    timestamp: new Date().toISOString()
-                });
+                    payload: parsedData.payload
+                };
+                triggeredAlerts.push(alertDetail);
+
+                if (rule.packet_level >= 10) {
+                    // gọi hành động alerter gửi lên socket và gửi về gmail
+                    sendSocketAlert(alertDetail);
+                    sendEmailAlert(alertDetail);
+                    alertTriggered = true;
+                }
+                return { triggeredAlerts, alertObj: alertTriggered };
             }
         }
     }
+    return { triggeredAlerts, alertObj: false };
 
-    return triggeredAlerts;
 };
