@@ -5,12 +5,10 @@ services:
     container_name: k13t_db
     restart: always
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=monitor_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - ./init:/docker-entrypoint-initdb.d
-      # Store data (not lost if turn off / delete postgresql container Docker)
-      # ./data:/var/lib/postgresql/data
     ports:
       - "5432:5432"

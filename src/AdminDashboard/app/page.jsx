@@ -22,10 +22,10 @@ export default function Dashboard() {
 
   // 1. SỬA LẠI HÀM LOGOUT
   const handleLogout = () => {
-      // Xóa thẻ bài khỏi túi
-      localStorage.removeItem('token');
-      // Đá về trang đăng nhập
-      router.push('/login');
+    // Xóa thẻ bài khỏi túi
+    localStorage.removeItem('token');
+    // Đá về trang đăng nhập
+    router.push('/login');
   }
 
   // 2. GẮN KHIÊN BẢO VỆ ROUTE GUARD
@@ -44,35 +44,35 @@ export default function Dashboard() {
         if (role === 'admin') {
           router.push('/admin');
         } else {
-          setMounted(true); 
+          setMounted(true);
 
           // ==========================================
           //  WEBSOCKET VIEWER
           // ==========================================
-          const ws = new WebSocket('ws://localhost:6001'); 
+          const ws = new WebSocket('ws://localhost:6001');
 
           ws.onopen = () => {
-              console.log("[Viewer Socket] Native WebSocket đã kết nối!");
-              ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
+            console.log("[Viewer Socket] Native WebSocket đã kết nối!");
+            ws.send(JSON.stringify({ type: 'REGISTER_UI', token: token }));
           };
 
           ws.onmessage = (event) => {
-              try {
-                  const data = JSON.parse(event.data);
-                  console.log("Dữ liệu từ Master:", data);
-                  if (data.type === 'FIM_ALERT_UI') {
-                      alert(`CẢNH BÁO: File ${data.payload.file_path} vừa bị sửa!`); 
-                  }
-              } catch (err) {
-                  console.error("Lỗi đọc Socket:", err);
+            try {
+              const data = JSON.parse(event.data);
+              console.log("Dữ liệu từ Master:", data);
+              if (data.type === 'NEW_ALERT_UI') {
+                alert(`CẢNH BÁO: File ${data.payload.file_path} vừa bị sửa!`);
               }
+            } catch (err) {
+              console.error("Lỗi đọc Socket:", err);
+            }
           };
 
           ws.onerror = (error) => console.error("[Viewer Socket] Lỗi WebSocket:", error);
           ws.onclose = () => console.log("[Viewer Socket] WebSocket đã đóng.");
 
           return () => {
-              if (ws.readyState === 1) ws.close();
+            if (ws.readyState === 1) ws.close();
           };
         }
       } catch (e) {
@@ -95,29 +95,29 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">
       {/* Sidebar - Mini rail */}
-      <SideBar handleFunc={handleLogout}/>      
+      <SideBar handleFunc={handleLogout} />
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <AppHeader route={"dashboard"}/>        
+        <AppHeader route={"dashboard"} />
         {/* Dashboard Grid */}
         <div className="flex-1 overflow-y-auto p-4 space-y-9 bg-[#0A0A0A]">
           {/* Top Row: Gauge, Pie, Location Legend */}
           <div className="grid grid-cols-12 gap-2 h-[300px]">
             {/* EPS Gauge */}
             <DashboardCard title="EPS Count" className="col-span-3 overflow-hidden">
-               <div className="flex flex-col items-center justify-center h-full relative pointer-events-none">
-                  {drawEPS(0.8)}
-                  <span className="text-lg text-secondary opacity-60">Overall Average of Count</span>
-               </div>
+              <div className="flex flex-col items-center justify-center h-full relative pointer-events-none">
+                {drawEPS(0.8)}
+                <span className="text-lg text-secondary opacity-60">Overall Average of Count</span>
+              </div>
             </DashboardCard>
 
             {/* Top 3 Agents Pie */}
             <DashboardCard title="Top 3 Agents by Log Count" className="col-span-4">
               <div className="w-full flex items-center h-64">
-                  <div className="w-[70%] h-full min-w-0 pointer-events-none">
-                    {drawPie(topAgentsData)}
-                  </div>
+                <div className="w-[70%] h-full min-w-0 pointer-events-none">
+                  {drawPie(topAgentsData)}
+                </div>
                 <div className="space-y-2 pr-4">
                   {topAgentsData.map((agent) => (
                     <div key={agent.name} className="flex items-center space-x-2 text-xs">
@@ -131,18 +131,18 @@ export default function Dashboard() {
 
             {/* Event Location Legends */}
             <DashboardCard title="Event - Location" className="col-span-5">
-               <div className="grid grid-cols-4 gap-y-2 gap-x-4 p-2 text-[10px] text-gray-400 h-full overflow-y-auto">
-                 {locationItems.map(item => (
-                   <div key={item.name} className="flex items-center space-x-1.5 truncate">
-                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                     <span className="truncate">{item.name}</span>
-                   </div>
-                 ))}
-               </div>
-               {/* Mini bar chart top 5 */}
-               <div className="h-30 w-full mt-7 bg-[#1A1A1A] rounded p-2 flex items-end space-x-0.5">
-                  <Top5PercentBarChart data = {processedELData}/>
-               </div>
+              <div className="grid grid-cols-4 gap-y-2 gap-x-4 p-2 text-[10px] text-gray-400 h-full overflow-y-auto">
+                {locationItems.map(item => (
+                  <div key={item.name} className="flex items-center space-x-1.5 truncate">
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Mini bar chart top 5 */}
+              <div className="h-30 w-full mt-7 bg-[#1A1A1A] rounded p-2 flex items-end space-x-0.5">
+                <Top5PercentBarChart data={processedELData} />
+              </div>
             </DashboardCard>
           </div>
 
@@ -182,15 +182,15 @@ export default function Dashboard() {
               </DashboardCard>
               <DashboardCard title="Active Agents" className="flex-1 flex flex-col items-center">
                 <div className='flex flex-col items-center justify-center mt-4'>
-                    <span className="text-7xl font-bold text-[#4ade80] mb-2">4</span>
-                    <span className="text-base text-gray-500">Active Agents</span>
+                  <span className="text-7xl font-bold text-[#4ade80] mb-2">4</span>
+                  <span className="text-base text-gray-500">Active Agents</span>
                 </div>
               </DashboardCard>
             </div>
 
             {/* High Events Table */}
             <DashboardCard title="High Events" className="col-span-5 flex flex-col">
-               <div className="flex-1 overflow-hidden mt-4">
+              <div className="flex-1 overflow-hidden mt-4">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-[#2A2A2A] text-gray-400">

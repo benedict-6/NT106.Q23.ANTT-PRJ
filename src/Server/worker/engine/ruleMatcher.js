@@ -3,9 +3,10 @@
 // Core logic so khớp sự kiện với Rules
 // src/Server/worker/engine/ruleMatcher.js
 
-import { activeRules } from "./parser.js";
+import { getActiveRules } from "./parser.js";
 import { sendSocketAlert, sendEmailAlert } from "../actions/alerter.js";
 
+let activeRules = getActiveRules();
 // Bộ nhớ đệm lưu trữ trạng thái (State) cho các rule cần đếm theo thời gian (Threshold)
 const thresholdCache = {};
 

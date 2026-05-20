@@ -21,19 +21,24 @@ CREATE TABLE IF NOT EXISTS servers (
 -- user_id FK liên kết agent thuộc user nào
 CREATE TABLE IF NOT EXISTS agents (
     agent_id TEXT PRIMARY KEY,
-    mac_address MACADDR NOT NULL,
-    hostname TEXT NOT NULL,
-    ip_address INET NOT NULL,
-    auth_token TEXT NOT NULL,
+    user_id TEXT,
+    mac_address MACADDR,
+    hostname TEXT,
+    ip_address INET,
+    auth_token TEXT,
     secret_key TEXT NOT NULL,
     secret_key_iv TEXT NOT NULL,
     secret_key_auth_tag TEXT NOT NULL,
     agent_description TEXT,
-    agent_status TEXT NOT NULL CHECK (agent_status IN ('online', 'offline'))
+    agent_status TEXT NOT NULL DEFAULT 'offline' CHECK (agent_status IN ('online', 'offline')),
+    current_session TEXT,
+    last_active TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_agent_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS applications (
-    app_id TEXT PRIMARY KEY, -- k nhiều nên k cần dùng hypertable timescaleDB
+    app_id BIGSERIAL PRIMARY KEY, -- Auto-generate ID (code INSERT không truyền app_id)
     agent_id TEXT NOT NULL,
     software_name TEXT,
     _version TEXT,
@@ -99,6 +104,29 @@ CREATE TABLE IF NOT EXISTS log_monitoring (
     PRIMARY KEY (log_monitoring_id, created_at)
 );
 
+-- Bảng logs (generic) - PHẢI tạo TRƯỚC rule_alert vì rule_alert FK đến nó
+CREATE TABLE IF NOT EXISTS logs (
+    log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    detail TEXT NOT NULL
+);
+
+-- Bảng detection_rules - PHẢI tạo TRƯỚC rule_alert vì rule_alert FK đến nó
+CREATE TABLE IF NOT EXISTS detection_rules (
+    rule_id TEXT PRIMARY KEY,               -- Ví dụ: '1001', '2001'
+    rule_name TEXT NOT NULL,                -- Ví dụ: 'Connection to suspicious RAT ports'
+    enabled BOOLEAN NOT NULL DEFAULT true,  -- Bật/tắt rule
+    packet_level INTEGER NOT NULL,          -- Mức độ nghiêm trọng (ví dụ: 15)
+    category TEXT NOT NULL,                 -- Ví dụ: 'network', 'process', 'fim'
+    data_source TEXT NOT NULL,              -- Ánh xạ từ "type" trong JSON (net_pro, file_integrity,...)
+    
+    -- Dùng JSONB để lưu trữ linh hoạt mảng conditions và object threshold
+    conditions JSONB NOT NULL DEFAULT '[]'::jsonb, 
+    threshold JSONB,                        -- Có thể NULL vì không phải rule nào cũng có threshold
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS rule_alert (
     rule_alert_id BIGSERIAL,
     agent_id TEXT NOT NULL,
@@ -107,19 +135,19 @@ CREATE TABLE IF NOT EXISTS rule_alert (
     alert BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    -- 1. Nguồn từ bảng net_pro
+    -- Nguồn từ bảng net_pro (Hypertable cần composite FK)
     net_pro_id BIGINT,
     net_pro_created_at TIMESTAMPTZ,
 
-    -- 2. Nguồn từ bảng file_integrity
+    -- Nguồn từ bảng file_integrity (Hypertable cần composite FK)
     file_log_id BIGINT,
     file_integrity_created_at TIMESTAMPTZ,
 
-    -- 3. Nguồn từ bảng log_monitoring
+    -- Nguồn từ bảng log_monitoring (Hypertable cần composite FK)
     log_monitoring_id BIGINT,
     log_monitoring_created_at TIMESTAMPTZ,
 
-    -- 4. Nguồn từ bảng logs (bảng này không phải Hypertable nên chỉ cần 1 ID)
+    -- Nguồn từ bảng logs (không phải Hypertable nên chỉ cần 1 ID)
     log_id UUID,
 
     PRIMARY KEY (rule_alert_id, created_at),
@@ -128,17 +156,21 @@ CREATE TABLE IF NOT EXISTS rule_alert (
     CONSTRAINT fk_rule_alert_agent 
         FOREIGN KEY (agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE,
 
-    -- Ràng buộc khóa ngoại đến net_pro (Bắt buộc kèm created_at)
+    -- Ràng buộc khóa ngoại đến detection_rules
+    CONSTRAINT fk_rule_alert_rule 
+        FOREIGN KEY (rule_id) REFERENCES detection_rules(rule_id) ON DELETE CASCADE,
+
+    -- Ràng buộc khóa ngoại đến net_pro (composite key vì Hypertable)
     CONSTRAINT fk_rule_alert_net_pro 
         FOREIGN KEY (net_pro_id, net_pro_created_at) 
         REFERENCES net_pro(net_pro_id, created_at) ON DELETE CASCADE,
 
-    -- Ràng buộc khóa ngoại đến file_integrity (Bắt buộc kèm created_at)
+    -- Ràng buộc khóa ngoại đến file_integrity (composite key vì Hypertable)
     CONSTRAINT fk_rule_alert_file 
         FOREIGN KEY (file_log_id, file_integrity_created_at) 
         REFERENCES file_integrity(file_log_id, created_at) ON DELETE CASCADE,
 
-    -- Ràng buộc khóa ngoại đến log_monitoring (Bắt buộc kèm created_at)
+    -- Ràng buộc khóa ngoại đến log_monitoring (composite key vì Hypertable)
     CONSTRAINT fk_rule_alert_log_mon 
         FOREIGN KEY (log_monitoring_id, log_monitoring_created_at) 
         REFERENCES log_monitoring(log_monitoring_id, created_at) ON DELETE CASCADE,
@@ -149,30 +181,20 @@ CREATE TABLE IF NOT EXISTS rule_alert (
         REFERENCES logs(log_id) ON DELETE CASCADE
 );
 
--- Khởi tạo Hypertable cho rule_alert
-SELECT create_hypertable('rule_alert', 'created_at', if_not_exists => TRUE);
-
-
-
-CREATE TABLE IF NOT EXISTS logs (
-    log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    detail TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_application_agent_id ON applications(agent_id);
-
-CREATE INDEX IF NOT EXISTS idx_net_pro_agent_created_at ON net_pro(agent_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_file_integrity_agent_created_at ON file_integrity(agent_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_log_monitoring_agent_created_at ON log_monitoring(agent_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_logs_detail ON logs USING gin (to_tsvector('simple', detail));
-
+-- =============================================
+-- Khởi tạo Hypertable (TimescaleDB)
+-- =============================================
 SELECT create_hypertable('net_pro', 'created_at', if_not_exists => TRUE);
-
 SELECT create_hypertable('file_integrity', 'created_at', if_not_exists => TRUE);
-
 SELECT create_hypertable('log_monitoring', 'created_at', if_not_exists => TRUE);
-
 SELECT create_hypertable('rule_alert', 'created_at', if_not_exists => TRUE);
+
+-- =============================================
+-- Indexes tối ưu truy vấn
+-- =============================================
+CREATE INDEX IF NOT EXISTS idx_application_agent_id ON applications(agent_id);
+CREATE INDEX IF NOT EXISTS idx_net_pro_agent_created_at ON net_pro(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_file_integrity_agent_created_at ON file_integrity(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_log_monitoring_agent_created_at ON log_monitoring(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_logs_detail ON logs USING gin (to_tsvector('simple', detail));
+CREATE INDEX IF NOT EXISTS idx_detection_rules_source ON detection_rules(data_source, enabled);

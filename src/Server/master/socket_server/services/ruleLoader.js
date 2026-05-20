@@ -6,7 +6,7 @@ export async function getAllRules() {
     let active_rules = []
     try {
         const rawRules = await pool.query(
-            "SELECT * FROM rules"
+            "SELECT * FROM detection_rules"
         );
 
         if (rawRules && rawRules.rows) {

@@ -2,7 +2,7 @@
 // SIEM Master Node — Entry Point
 // server.js chỉ khởi tạo và trỏ đến các route modules
 // ====================================================
-import { DB_config, masterConfig } from "../shared/config/index.js";
+import { masterConfig } from "../shared/config/index.js";
 import express from "express";
 import { createServer } from "http";
 import cors from "cors";
@@ -38,6 +38,9 @@ pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error("Lỗi kết nối Database:", err);
         process.exit(1);
+    }
+    else {
+        console.log("Kết nối database thành công!");
     }
 
     httpServer.listen(masterConfig.port, () => {
