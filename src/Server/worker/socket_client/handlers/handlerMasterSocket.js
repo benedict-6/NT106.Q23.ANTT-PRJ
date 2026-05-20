@@ -1,7 +1,7 @@
 // Dùng để xử lý các event của socket, event khác với các hành động
 
 import { workerConfig } from '../../../shared/config/index.js';
-import { parseRule, activeRules } from '../../engine/parser.js';
+import { parseRule } from '../../engine/parser.js';
 
 import { sendToMaster } from '../services/serviceMasterSocket.js';
 

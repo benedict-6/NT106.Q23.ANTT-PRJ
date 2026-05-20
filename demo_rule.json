@@ -8,7 +8,7 @@
       "enabled": true,
       "packet_level": 15,
       "category": "network",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "dport", "operator": "in", "value": [4444, 1337, 5555, 6666, 9999] }
       ]
@@ -20,7 +20,7 @@
       "enabled": true,
       "packet_level": 15,
       "category": "network",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "daddr", "operator": "in_blacklist", "value": null }
       ]
@@ -32,7 +32,7 @@
       "enabled": true,
       "packet_level": 1,
       "category": "network",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "daddr", "operator": "is_external", "value": true }
       ]
@@ -44,7 +44,7 @@
       "enabled": true,
       "packet_level": 15,
       "category": "process",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "comm", "operator": "in", "value": ["bash", "sh", "zsh"] }
       ]
@@ -57,7 +57,7 @@
       "enabled": true,
       "packet_level": 10,
       "category": "process",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "filename", "operator": "regex", "value": "\\/(tmp|var\\/tmp)\\/" }
       ]
@@ -69,7 +69,7 @@
       "enabled": true,
       "packet_level": 10,
       "category": "combo",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "uid", "operator": "in", "value": [0] },
         { "field": "daddr", "operator": "is_external", "value": true }
@@ -82,7 +82,7 @@
       "enabled": true,
       "packet_level": 10,
       "category": "network",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "protocol", "operator": "equals", "value": 6 }
       ],
@@ -99,7 +99,7 @@
       "enabled": true,
       "packet_level": 10,
       "category": "network",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [
         { "field": "protocol", "operator": "equals", "value": 6 }
       ],
@@ -116,7 +116,7 @@
       "enabled": true,
       "packet_level": 15,
       "category": "process",
-      "data_type": "net_pro",
+      "type": "net_pro",
       "conditions": [],
       "threshold": {
         "count": 30,
@@ -132,7 +132,7 @@
       "enabled": true,
       "packet_level": 5,
       "category": "auth",
-      "data_type": "log_monitoring",
+      "type": "log_monitoring",
       "conditions": [
         { "field": "action", "operator": "contains", "value": "Failed password" }
       ]
@@ -144,7 +144,7 @@
       "enabled": true,
       "packet_level": 10,
       "category": "auth",
-      "data_type": "log_monitoring",
+      "type": "log_monitoring",
       "conditions": [
         { "field": "action", "operator": "contains", "value": "Failed password" }
       ],
@@ -163,7 +163,7 @@
       "enabled": true,
       "packet_level": 15,
       "category": "fim",
-      "data_type": "file_integrity",
+      "type": "file_integrity",
       "conditions": [
         { "field": "file", "operator": "in", "value": ["/etc/passwd", "/etc/shadow", "/etc/sudoers"] },
         { "field": "event", "operator": "equals", "value": "MODIFIED" }
@@ -176,10 +176,47 @@
       "enabled": true,
       "packet_level": 15,
       "category": "fim",
-      "data_type": "file_integrity",
+      "type": "file_integrity",
       "conditions": [
         { "field": "file", "operator": "regex", "value": "^\\/etc\\/" },
         { "field": "event", "operator": "equals", "value": "DELETED" }
+      ]
+    },
+      {
+      "rule_id": "5003",
+      "rule_name": "Critical file owner changed from root to non-root user",
+      "enabled": true,
+      "packet_level": 14,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        { "field": "event", "operator": "equals", "value": "MODIFIED" },
+        { "field": "old_uid", "operator": "equals", "value": 0 },
+        { "field": "uid", "operator": "not_equals", "value": 0 }
+      ]
+    },
+    {
+      "rule_id": "5004",
+      "rule_name": "Critical system file has unauthorized owner/group",
+      "enabled": true,
+      "packet_level": 12,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        { "field": "file", "operator": "in", "value": ["/etc/passwd", "/etc/shadow", "/etc/sudoers"] },
+        { "field": "uid", "operator": "not_in", "value": [0, 1000] }
+      ]
+    },
+    {
+      "rule_id": "5005",
+      "rule_name": "File time tampering detected (Timestomping)",
+      "enabled": true,
+      "packet_level": 15,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        { "field": "event", "operator": "equals", "value": "MODIFIED" },
+        { "field": "time_skew_seconds", "operator": "gte", "value": 5 }
       ]
     },
 
@@ -190,7 +227,7 @@
       "enabled": true,
       "packet_level": 15,
       "category": "vuln",
-      "data_type": "software_list",
+      "type": "software_list",
       "conditions": [
         { "field": "cve_id", "operator": "is_not_null", "value": null },
         { "field": "cvss_score", "operator": "gte", "value": 9.0 }

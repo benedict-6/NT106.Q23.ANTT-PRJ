@@ -1,4 +1,4 @@
-import pool from "../../../shared/database/connect.js";
+import pool from "../../shared/database/connect.js";
 import { evaluateData } from "./ruleMatcher.js";
 import { writeLogToDB, saveRuleAlert } from "../actions/dbWriter.js";
 import { parseAgentData } from "./parser.js";
