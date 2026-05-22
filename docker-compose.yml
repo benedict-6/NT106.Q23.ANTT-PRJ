@@ -10,7 +10,5 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - ./init:/docker-entrypoint-initdb.d
-      # Store data (not lost if turn off / delete postgresql container Docker)
-      # ./data:/var/lib/postgresql/data
     ports:
       - "5432:5432"

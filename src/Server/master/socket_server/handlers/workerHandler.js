@@ -3,17 +3,20 @@
 // Websocket
 import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
-import { getAllRules } from "../services/ruleService.js";
+import { getAllRules } from "../services/ruleLoader.js";
+import { activeUIs } from "./uiHandler.js";
 
 export const activeWorkers = new Map();
 
-export default function initWorkerWebSocket(port = 6000) {
+export default function WebsocketHandler(port) {
 	const wss = new WebSocketServer({ port });
 
 	// Danh bạ lưu trữ các kết nối đang sống (Active connections)
 	// Key: worker_id, Value: WebSocket object
 	wss.on('connection', (ws, req) => {
-		console.log(`[+] Có một kết nối WebSocket mới... Đang chờ định danh.`);
+		// Lấy IP của Worker từ request kết nối
+		const workerIp = req.socket.remoteAddress;
+		console.log(`[+] Có một kết nối WebSocket mới từ IP: ${workerIp}... Đang chờ định danh.`);
 
 		const authTimeout = setTimeout(() => {
 			console.log(`[!] Báo động: Kết nối từ ${workerIp} không chịu định danh. Đang hủy...`);
@@ -21,7 +24,7 @@ export default function initWorkerWebSocket(port = 6000) {
 			ws.close(4001, "Timeout: Không nhận được gói tin định danh");
 		}, 5000);
 
-		ws.on('message', (message) => {
+		ws.on('message', async (message) => {
 			try {
 				const data = JSON.parse(message);
 				console.log(`Nhận được dữ liệu từ worker:`, data);
@@ -41,6 +44,15 @@ export default function initWorkerWebSocket(port = 6000) {
 
 					console.log(`[+] Worker [${workerID}] đã gia nhập mạng lưới. Tổng số Worker: ${activeWorkers.size}`);
 					ws.send(JSON.stringify({ type: 'WELCOME', message: 'Đăng ký thành công!' }));
+
+					// getAllRules() là hàm async, phải có await để đợi DB trả kết quả
+					const rules = await getAllRules();
+					ws.send(
+						JSON.stringify({
+							type: 'RULES',
+							message: rules
+						})
+					)
 					return;
 				}
 				if (!ws.workerID) {
@@ -54,23 +66,53 @@ export default function initWorkerWebSocket(port = 6000) {
 					// Lưu DB...
 				}
 
-				if (data.type === 'FIM_ALERT') {
-					console.log(`[Master] File ${data.payload.file_path} bị thay đổi! Đang xử lý...`);
+				if (data.type === 'UPDATE_LAST_ACTIVE') {
+					try {
+						const { agent_id } = data.payload;
+						await updateLastActive(agent_id);
 
-					// Gửi thẳng cho tất cả các tab UI đang mở
-					const alertMessage = JSON.stringify({
-						type: 'FIM_ALERT_UI',
-						payload: {
-							level: 'CRITICAL',
-							...data.payload, // bung toàn bộ agent_id, file_path, hashes ra
-							time: new Date()
+						// Chuyển tiếp trạng thái online lên UI nếu có UI đang mở
+						if (activeUIs && activeUIs.size > 0) {
+							const statusMessage = JSON.stringify({
+								type: 'AGENT_STATUS_UPDATE',
+								agent_id: agent_id,
+								status: 'online',
+								last_active: new Date().toISOString()
+							});
+							activeUIs.forEach(uiClient => {
+								if (uiClient.readyState === 1) {
+									uiClient.send(statusMessage);
+								}
+							});
 						}
-					});
+					} catch (err) {
+						console.error(`[Master] Lỗi cập nhật last_active cho Agent:`, err.message);
+					}
+					return;
+				}
 
-					//Giả sử gửi data lên UI
-					activeUIs.forEach(uiClient => {
-						if (uiClient.readyState === 1) uiClient.send(alertMessage);
-					});
+				if (data.type === 'RULE_ALERT') {
+					console.log(`[Master] Nhận cảnh báo từ Agent [${data.agent_id}]! Đang kiểm tra để chuyển tiếp cho UI...`);
+
+					// Chỉ xử lý chuyển tiếp nếu có UI đang kết nối
+					if (activeUIs && activeUIs.size > 0) {
+						// Đóng gói gói tin chuẩn (không bung data payload để tránh hỏng dữ liệu gốc)
+						const alertMessage = JSON.stringify({
+							type: 'NEW_ALERT_UI',
+							agent_id: data.agent_id,
+							payload: data.payload,
+							time: new Date().toISOString()
+						});
+
+						// Gửi data lên UI
+						activeUIs.forEach(uiClient => {
+							if (uiClient.readyState === 1) {
+								uiClient.send(alertMessage);
+							}
+						});
+					} else {
+						// console.log(`[Master] Bỏ qua chuyển tiếp do không có UI nào đang kết nối.`);
+					}
 				}
 			}
 			catch (err) {
@@ -84,6 +126,7 @@ export default function initWorkerWebSocket(port = 6000) {
 				console.log(`[-] Worker [${ws.workerID}] đã sập/ngắt kết nối. Còn lại: ${activeWorkers.size}`);
 			}
 		});
+
 	});
 
 	console.log("Master Node WebSocket (Worker-Listener) chạy trên cổng 6000");

@@ -46,7 +46,7 @@ const RegisterPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_MASTER_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // Dữ liệu gửi đi: Map đúng tên biến mà API Backend yêu cầu
@@ -134,12 +134,12 @@ const RegisterPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-base font-mono">
-                  <InputField label="F1RST N4M3" placeholder="" value={firstName} onChange={(e)=>setFirstName(e.target.value)} icon={<Odysee/>}/>
-                  <InputField label="L4ST N4M3" placeholder="" value={lastName} onChange={(e)=>setLastName(e.target.value)} />
+                  <InputField label="F1RST N4M3" placeholder="" value={firstName} onChange={(e) => setFirstName(e.target.value)} icon={<Odysee />} />
+                  <InputField label="L4ST N4M3" placeholder="" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                 </div>
 
-                <InputField label="SCH00L" placeholder="" value={school} onChange={(e)=>setSchool(e.target.value)} icon={<School/>}/>
-                <InputField label="9M41L" type="email" value={email} onChange={(e)=>setEmail(e.target.value)} icon={<Gmail/>}/>
+                <InputField label="SCH00L" placeholder="" value={school} onChange={(e) => setSchool(e.target.value)} icon={<School />} />
+                <InputField label="9M41L" type="email" value={email} onChange={(e) => setEmail(e.target.value)} icon={<Gmail />} />
 
                 <div className='flex justify-end'>
                   <button 
@@ -166,8 +166,8 @@ const RegisterPage = () => {
                   </h2>
                 </div>
 
-                <InputField label="P4SSW0RD" placeholder="" value={password} onChange={(e)=>setPassword(e.target.value)} icon={<KeeWeb/>} type="password" />
-                <InputField label="C0NF1RM P4SSW0RD" placeholder="" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} icon={<Again/>} type="password" />
+                <InputField label="P4SSW0RD" placeholder="" value={password} onChange={(e) => setPassword(e.target.value)} icon={<KeeWeb />} type="password" />
+                <InputField label="C0NF1RM P4SSW0RD" placeholder="" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} icon={<Again />} type="password" />
 
                 <div className="bg-blue-500/5 border border-blue-500/10 p-2 rounded-sm">
                   <div className="flex flex-col space-x-3">
@@ -228,7 +228,7 @@ const RegisterPage = () => {
               ALREADY HAVE AN ACCOUNT
             </button>
             <div className='flex flex-row items-center justify-center gap-x-2'>
-              <Guide/>
+              <Guide />
               <Link href="/guide" className="text-[13px] font-bold text-gray-600 tracking-[0.25em] hover:text-blue-400 transition-colors uppercase border-b border-transparent hover:border-blue-400/30 pb-1">
                 GUIDE
               </Link>

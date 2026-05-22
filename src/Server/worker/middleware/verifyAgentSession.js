@@ -1,7 +1,8 @@
 // Middleware xác thực Session Token cho các request từ Agent (upload data)
 // Agent gửi session_token trong header Authorization sau khi handshake thành công
 
-import pool from '../../shared/database/connect.js';
+import jwt from 'jsonwebtoken';
+import { sendToMaster } from '../socket_client/services/serviceMasterSocket.js';
 
 const verifyAgentSession = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -17,30 +18,24 @@ const verifyAgentSession = async (req, res, next) => {
     }
 
     try {
-        const result = await pool.query(
-            "SELECT * FROM agents WHERE current_session = $1 AND agent_status = 'Active'",
-            [sessionToken]
-        );
+        // Xác thực qua JWT (không cần hit DB liên tục)
+        const decoded = jwt.verify(sessionToken, process.env.JWT_SECRET_SESSION_AGENT);
 
-        if (result.rows.length === 0) {
-            return res.status(401).json({ message: 'Session Token không hợp lệ hoặc đã hết hạn.' });
-        }
-
-        const agent = result.rows[0];
-
-        // Cập nhật last_active
-        await pool.query(
-            "UPDATE agents SET last_active = NOW() WHERE agent_id = $1",
-            [agent.agent_id]
-        );
+        // Báo cho Master ghi DB thông qua WebSocket
+        sendToMaster({
+            type: 'UPDATE_LAST_ACTIVE',
+            payload: {
+                agent_id: decoded.agent_id
+            }
+        });
 
         // Gắn thông tin agent vào request để controller dùng
-        req.agent = agent;
+        req.agent = { agent_id: decoded.agent_id };
 
         next();
     } catch (err) {
-        console.error('Lỗi xác thực Agent Session:', err);
-        res.status(500).json({ message: 'Lỗi server khi xác thực agent' });
+        console.error('Lỗi xác thực Agent Session:', err.message);
+        res.status(401).json({ message: 'Session Token không hợp lệ hoặc đã hết hạn.' });
     }
 };
 

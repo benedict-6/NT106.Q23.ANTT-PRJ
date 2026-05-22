@@ -6,27 +6,27 @@ import crypto from 'crypto';
 const getMasterKey = () => Buffer.from(process.env.AES_MASTER_KEY, 'hex');
 
 export const GCMdecrypt = (cipherObj) => {
-	try{
-		const {encryptedData, iv, authTag} = cipherObj;
+	try {
+		const { encryptedData, iv, authTag } = cipherObj;
 
 		const ivBuffer = Buffer.from(iv, 'hex');
 		const authTagBuffer = Buffer.from(authTag, 'hex');
 		const masterKey = getMasterKey();
 
 		const decipher = crypto.createDecipheriv(
-			'aes-256-gcm', 
-			masterKey, 
+			'aes-256-gcm',
+			masterKey,
 			ivBuffer
 		);
-		
+
 		decipher.setAuthTag(authTagBuffer);
-		
+
 		let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
 		decrypted += decipher.final('utf8');
 
 		return decrypted;
 	}
-	catch(err){
+	catch (err) {
 		console.error('Không thể giải mã Key', err.message);
 		return null;
 	}
@@ -46,7 +46,7 @@ export const GCMencrypt = (plainText) => {
 
 	const tag = cipher.getAuthTag();
 
-	return{
+	return {
 		iv: iv.toString('hex'),
 		cipherText: encrypted,
 		tag: tag.toString('hex')

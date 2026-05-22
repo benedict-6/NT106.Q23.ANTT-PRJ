@@ -2,11 +2,10 @@
 // Khởi tạo pool kết nối CSDL (Mongo/Postgres/Elasticsearch)
 import { DB_config } from "../config/index.js";
 import pkg from "pg";
+const { Pool } = pkg;
 
 // // Đọc file .env
 // dotenv.config({ path: path.join(__dirname, '../../.env') });
-
-const { Pool } = pkg;
 
 // Khởi tạo kết nối: Dùng toán tử || để ưu tiên POSTGRES_ trước, nếu không có mới tìm DB_
 const pool = new Pool({
