@@ -59,7 +59,7 @@ const RegisterPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("ĐĂNG KÝ THÀNH CÔNG! HÃY ĐĂNG NHẬP VỚI TÀI KHOẢN VỪA TẠO.");
+        // alert("ĐĂNG KÝ THÀNH CÔNG! HÃY ĐĂNG NHẬP VỚI TÀI KHOẢN VỪA TẠO.");
         handlePowerOff(); // Về login
       } else {
         setErrorMsg(data.message || 'ĐĂNG KÝ THẤT BẠI!');

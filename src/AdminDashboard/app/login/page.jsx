@@ -1,9 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Terminal, ArrowRight } from 'lucide-react';
+import { Terminal, ArrowRight, AlertTriangle } from 'lucide-react';
 import { RobotFramework, BattleDotNet, KeyCDN, Github, Discord } from '../../helper/icons.jsx';
 
 import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
@@ -15,11 +15,22 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    React.useEffect(() => {
+        if(errorMsg){
+            const death = setTimeout(() => {
+                setErrorMsg('');
+            }, 10 * 1000); // error notification will disappear after 10s
+            return () => clearTimeout(death);
+        }
+    }, [errorMsg]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setErrorMsg('');
+        setSuccessMsg('');
         setIsLoading(true);
 
         try {
@@ -46,7 +57,6 @@ export default function LoginPage() {
                 }
 
                 localStorage.setItem('token', data.token);
-
                 try {
                     const base64Url = data.token.split('.')[1];
                     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -54,18 +64,22 @@ export default function LoginPage() {
                     console.log("[4] Giải mã Token thành công:", payload);
 
                     const role = payload._role || payload.role;
-
-                    if (role === 'admin') {
-                        router.push('/admin');
-                    } else {
-                        router.push('/');
-                    }
+                    setSuccessMsg('Welcome sir/madam');
+                    setTimeout(() => {
+                        if (role === 'admin') {
+                            router.push('/admin');
+                        } else {
+                            router.push('/');
+                        }
+                    }, 1000);
+                
                 } catch (decodeError) {
                     console.error("Lỗi giải mã token:", decodeError);
                     router.push('/login');
                 }
             } else {
                 setErrorMsg(data.message || 'Đăng nhập thất bại!');
+                console.error(`[Login] Failed! Status Code: ${response.status}`, data.message);
             }
         } catch (error) {
             console.error("Lỗi mạng (Network Error):", error);
@@ -106,7 +120,7 @@ export default function LoginPage() {
                     <form className="space-y-4" onSubmit={handleLogin}>
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <label className="text-[17px] uppercase tracking-tight font-bold text-blue-500">USERNAME</label>
+                                <label className="text-[17px] tracking-tight font-bold text-blue-500">USERMAIL</label>
                             </div>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-500/30 group-focus-within:text-blue-500 transition-colors">
@@ -119,7 +133,7 @@ export default function LoginPage() {
                                     placeholder="IDENTIFY WHO YOU ARE"
                                     autoComplete="off"
                                     spellCheck="false"
-                                    className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-13 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base uppercase"
+                                    className="w-full bg-black border border-blue-500/30 rounded-none py-3.5 pl-13 pr-4 text-blue-400 placeholder:text-[#808080] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-base"
                                 />
                             </div>
                         </div>
@@ -146,6 +160,37 @@ export default function LoginPage() {
                                 <Link href="#" className="text-[12px] font-bold text-gray-600 hover:text-blue-500 transition-colors">FORGET SOMETHING?</Link>
                             </div>
                         </div>
+
+                        {errorMsg && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                transition={{ duration: 0.3 }}
+                                className="p-3 bg-red-950/30 border border-red-500/40 text-red-400 text-xs tracking-wider uppercase flex items-start space-x-2 animate-pulse"
+                            >
+                                <div className='flex flex-row items-center gap-x-3'>
+                                    <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                                    {<span className="font-bold text-red-500">ACCESS_DENIED: {errorMsg}</span>}
+                                </div>
+                            </motion.div>
+                        )}
+                        
+                        {successMsg && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                transition={{ duration: 0.3 }}
+                                className="p-3 bg-green-950/30 border border-green-500/40 text-green-400 text-xs tracking-wider uppercase flex items-start space-x-2"
+                            >
+                                <span className="text-green-500 animate-ping shrink-0 mt-1">●</span>
+                                <div>
+                                    <span className="font-bold text-green-500">ACCESS_GRANTED: </span>
+                                    {successMsg}
+                                </div>
+                            </motion.div>
+                        )}
 
                         <button disabled={isLoading} type="submit" className="w-full bg-blue-900/20 border-2 border-blue-500 hover:bg-blue-500 hover:text-white text-blue-500 font-bold py-3 rounded-none flex items-center justify-center space-x-3 transition-all active:scale-[0.98] mt-2 group">
                             <span className="tracking-[0.3em]">HACK</span>

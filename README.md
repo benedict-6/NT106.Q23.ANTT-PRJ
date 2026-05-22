@@ -8,15 +8,27 @@
 
 ## Run project:
 
-# Run UI:
+### Activate database
+```bash
+chmod +x activateDB.sh
+./activateDB.sh
+```
+
+### Run UI
+```bash
 cd "src/AdminDashboard"
 npm install
 npm run dev
+```
 
-# Run all Server:
+### Run all Server
+```bash
 npm install
 npm run dev
+```
 
-# Run nginx:
+### Run nginx
 *Copy the nginx.conf.example to /etc/nginx/sites-available/default*
+```linux
 sudo systemctl start nginx 
+```
