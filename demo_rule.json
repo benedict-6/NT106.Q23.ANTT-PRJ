@@ -1,7 +1,5 @@
 {
   "detection_rules": [
-
-
     {
       "rule_id": "1001",
       "rule_name": "Connection to suspicious RAT ports",

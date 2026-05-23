@@ -59,7 +59,7 @@ const RegisterPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("ĐĂNG KÝ THÀNH CÔNG! HÃY ĐĂNG NHẬP VỚI TÀI KHOẢN VỪA TẠO.");
+        // alert("ĐĂNG KÝ THÀNH CÔNG! HÃY ĐĂNG NHẬP VỚI TÀI KHOẢN VỪA TẠO.");
         handlePowerOff(); // Về login
       } else {
         setErrorMsg(data.message || 'ĐĂNG KÝ THẤT BẠI!');
@@ -76,12 +76,12 @@ const RegisterPage = () => {
     <div className="min-h-screen hacker-bg flex flex-col items-center justify-center p-4 relative overflow-hidden font-mono text-blue-500/90">
       {/* Dynamic Scanline & Grid */}
       <div className="scanline" />
-      <div className="absolute inset-0 opacity-[0.05] pointer-events-none"
-        style={{ backgroundImage: 'linear-gradient(#3b82f6 1px, transparent 1px), linear-gradient(90deg, #3b82f6 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
+           style={{ backgroundImage: 'linear-gradient(#3b82f6 1px, transparent 1px), linear-gradient(90deg, #3b82f6 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      
+      <RenderUIPattern/>
 
-      <RenderUIPattern />
-
-      <motion.div
+      <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -95,8 +95,8 @@ const RegisterPage = () => {
           </div>
           <div className="flex space-x-1">
             {[1, 2].map((i) => (
-              <div
-                key={i}
+              <div 
+                key={i} 
                 className={`h-1 w-8 rounded-full transition-all duration-500 ${step >= i ? 'bg-blue-500 shadow-[0_0_8px_#3b82f6]' : 'bg-gray-800'}`}
               />
             ))}
@@ -142,7 +142,7 @@ const RegisterPage = () => {
                 <InputField label="9M41L" type="email" value={email} onChange={(e) => setEmail(e.target.value)} icon={<Gmail />} />
 
                 <div className='flex justify-end'>
-                  <button
+                  <button 
                     onClick={() => setStep(2)}
                     type="button"
                     className="bg-blue-900/10 border-2 border-blue-500/50 hover:border-blue-400 hover:bg-blue-500 hover:text-white text-blue-400 font-bold px-3 py-2 rounded-3xl transition-all flex items-center justify-center space-x-2 group"
@@ -178,14 +178,14 @@ const RegisterPage = () => {
                     </div>
                     <div>
                       <p className="text-[11px] text-gray-500 leading-relaxed uppercase ml-[20px]">
-                        Passwords must be at least 12 to 28 characters long.
-                        Include a combination of letters, numbers, and special characters.
+                          Passwords must be at least 12 to 28 characters long.  
+                          Include a combination of letters, numbers, and special characters.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <CustomCheckbox
+                <CustomCheckbox 
                   checked={agreeTerms}
                   onChange={setAgreeTerms}
                   label="I acknowledge the"
@@ -194,7 +194,7 @@ const RegisterPage = () => {
                 />
 
                 <div className="flex flex-col sm:flex-row space-y-0 sm:space-y-0 sm:space-x-31">
-                  <button
+                  <button 
                     onClick={() => setStep(1)}
                     type="button"
                     className="bg-blue-900/10 border-2 border-blue-500/50 hover:border-blue-400 hover:bg-blue-500 hover:text-white text-blue-400 font-bold px-3 rounded-full transition-all flex items-center justify-center space-x-2 group"
@@ -221,7 +221,7 @@ const RegisterPage = () => {
         {/* Footer Navigation */}
         <div className="mt-3 flex flex-col items-center">
           <div className="flex items-center justify-center space-x-6">
-            <button
+            <button 
               onClick={handlePowerOff}
               className="text-[13px] font-bold text-gray-600 tracking-[0.25em] hover:text-blue-400 transition-colors uppercase border-b border-transparent hover:border-blue-400/30 pb-1 cursor-pointer bg-transparent"
             >
