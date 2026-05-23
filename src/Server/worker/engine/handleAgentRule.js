@@ -9,10 +9,10 @@ import { parseAgentData } from "./parser.js";
 export const handleAgentFim = async (agentPayload) => {
 	try {
 		const { triggeredAlerts, alertObj } = evaluateData(agentPayload);
-		
+
 		// Chờ lưu log gốc và lấy ra ID sinh tự động
 		const dbResult = await writeLogToDB(agentPayload);
-		
+
 		if (dbResult) {
 			const { id, createdAt } = dbResult;
 			await saveRuleAlert(triggeredAlerts, alertObj, id, createdAt, agentPayload.type);
@@ -77,7 +77,8 @@ export const handleAgentLogReport = async (decodedData, agent_id) => {
  */
 export const handleAgentSoftware = async (agentPayload) => {
 	try {
-		const softwareList = agentPayload.payload;
+		// Trỏ đúng vào mảng 'packages' bên trong payload
+		const softwareList = agentPayload.payload.packages || agentPayload.payload;
 		if (Array.isArray(softwareList)) {
 			for (const sw of softwareList) {
 				const singleSwEvent = { ...agentPayload, payload: sw };

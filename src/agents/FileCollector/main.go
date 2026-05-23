@@ -239,10 +239,10 @@ func main() {
 						metadata["event"] = eventType
 						now := time.Now().UTC()
 
-						metadata["timestamp"] = now.Format(time.RFC3339)
+						metadata["timestamp"] = now.Format("2006-01-02T15:04:05.000Z")
 
 						info, _ := os.Stat(fullPath)
-						metadata["mtime"] = info.ModTime().UTC().Format(time.RFC3339)
+						metadata["mtime"] = info.ModTime().UTC().Format("2006-01-02T15:04:05.000Z")
 
 						if isNoise(fullPath) || !shouldProcess(fullPath) {
 							continue
