@@ -3,31 +3,33 @@
 ## 1. Tổng Quan Luồng Xác Thực
 
 ```
-User (Browser)                Master Server                 Agent (Go binary)
-     │                              │                              │
-     │── POST /api/auth/register ──▶│                              │
-     │◀── 201 Created ─────────────│                              │
-     │                              │                              │
-     │── POST /api/auth/login ────▶│                              │
-     │◀── 200 {jwt_token} ────────│                              │
-     │                              │                              │
-     │── POST /agents/create (JWT)▶│                              │
-     │◀── 201 {agent_id, secret} ──│                              │
-     │                              │                              │
-     │── GET /agents/download (JWT)▶│                              │
-     │◀── agent_config.json ───────│                              │
-     │                              │                              │
-     │         User cài agent + đặt config lên máy trạm           │
-     │                              │                              │
-     │                              │◀── POST /agent/handshake ────│
-     │                              │    {agent_id, mac, ts, sig}  │
-     │                              │── 200 {session_token} ──────▶│
-     │                              │                              │
-     │◀── Socket.IO agent:connected│                              │
-     │                              │                              │
-     │                              │◀── POST /agent/upload ───────│
-     │                              │    (Bearer session_token)    │
-     │                              │── 200 OK ───────────────────▶│
+User (Browser)                  Master Server                  Agent (Go binary)
+     │                                │                                │
+     │─── POST /api/auth/register ───>│                                │
+     │<── 201 Created ────────────────│                                │
+     │                                │                                │
+     │─── POST /api/auth/login ──────>│                                │
+     │<── 200 OK {jwt_token} ─────────│                                │
+     │                                │                                │
+     │─── POST /agents/create (JWT) ─>│                                │
+     │<── 201 {agent_id, secret} ─────│                                │
+     │                                │                                │
+     │─── GET /agents/download (JWT) >│                                │
+     │<── agent_config.json ──────────│                                │
+     │                                │                                │
+     │                    User cài đặt Agent & đặt                     │
+     │                    config lên trên máy trạm                     │
+     │                                │                                │
+     │                                │<─── POST /agent/handshake ─────│
+     │                                │     {agent_id, mac, ts, sig}   │
+     │                                │─── 200 {session_token} ───────>│
+     │                                │                                │
+     │<── Socket.IO agent:connected ──│                                │
+     │                                │                                │
+     │                                │<─── POST /agent/upload ────────│
+     │                                │     (Bearer session_token)     │
+     │                                │─── 200 OK ────────────────────>│
+     │                                │                                │
 ```
 
 ## 2. API Endpoints
