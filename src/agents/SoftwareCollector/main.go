@@ -70,6 +70,7 @@ func main() {
 				Type: "software_list",
 				Metadata: map[string]interface{}{
 					"packages": packages,
+					"timestamp": time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 				},
 			}
 
@@ -98,7 +99,7 @@ func main() {
 			}
 		}
 
-		// Collect every 60 seconds
-		time.Sleep(60 * time.Second)
+		// Collect every 12 hour
+		time.Sleep(12 * time.Hour)
 	}
 }

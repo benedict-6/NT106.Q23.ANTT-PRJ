@@ -103,13 +103,13 @@ func parseAuditLog(line, filePath string) Event {
 			parts := strings.Split(inner, ".")
 			if len(parts) >= 1 {
 				if sec, err := strconv.ParseInt(parts[0], 10, 64); err == nil {
-					meta["timestamp"] = time.Unix(sec, 0).Format(time.RFC3339)
+					meta["timestamp"] = time.Unix(sec, 0).Format("2006-01-02T15:04:05.000Z")
 				}
 			}
 		}
 	}
 	if _, ok := meta["timestamp"]; !ok {
-		meta["timestamp"] = time.Now().Format(time.RFC3339)
+		meta["timestamp"] = time.Now().Format("2006-01-02T15:04:05.000Z")
 	}
 
 	if uid, ok := meta["uid"]; ok {
@@ -237,8 +237,6 @@ func parseAuthLog(line, filePath string) Event {
 
 	return fallback(line, filePath)
 }
-
-
 
 func collectLogs(filePath string, logChan chan<- []byte) {
 	for {

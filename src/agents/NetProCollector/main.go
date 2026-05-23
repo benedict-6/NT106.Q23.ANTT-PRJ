@@ -170,9 +170,9 @@ func main() {
 		// ---------------- timestamp (GIỮ event time) ----------------
 		if ts, ok := meta["timestamp"].(float64); ok && ts > 0 {
 			t := time.Unix(0, int64(ts)).UTC()
-			meta["timestamp"] = t.Format(time.RFC3339)
+			meta["timestamp"] = t.Format("2006-01-02T15:04:05.000Z")
 		} else {
-			meta["timestamp"] = time.Now().UTC().Format(time.RFC3339)
+			meta["timestamp"] = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 		}
 
 		// ---------------- clean field rỗng ----------------
