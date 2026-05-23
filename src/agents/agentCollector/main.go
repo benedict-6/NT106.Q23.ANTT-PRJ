@@ -69,22 +69,23 @@ func main() {
 	}
 	os.MkdirAll(filepath.Dir(socketPath), 0755)
 
-	listener, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen("unix", socketPath) // yêu cầu hệ điều hành tạo 1 socket ở socketpath
 	if err != nil {
 		log.Fatalf("Listen error: %v", err)
 	}
-	defer listener.Close()
+	defer listener.Close() //  tắt ngay khi main kết thúc
 
 	log.Printf("Listening on Unix socket: %s", socketPath)
-	os.Chmod(socketPath, 0777)
+	os.Chmod(socketPath, 0777) // cấp quyền truy cập cho socketpath
 
 	dataCh := make(chan []byte, 1000)
 
+	// 4. Nhận data từ dataCh, xử lý và gửi đi
 	// Worker to process and send data
 	go dataProcessor(dataCh)
 
 	// Handle graceful shutdown
-	sigCh := make(chan os.Signal, 1)
+	sigCh := make(chan os.Signal, 1) // tạo 1 channel để nhận tín hiệu từ hệ điều hành
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
@@ -93,13 +94,14 @@ func main() {
 		os.Exit(0)
 	}()
 
+	// 5. Chấp nhận kết nối từ các collector khác
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("Accept error: %v", err)
 			continue
 		}
-		go handleConnection(conn, dataCh)
+		go handleConnection(conn, dataCh) // xử lý thu thập data và bơm vào dataCh
 	}
 }
 
@@ -218,7 +220,7 @@ func handleConnection(conn net.Conn, dataCh chan<- []byte) {
 	}
 }
 
-func dataProcessor(dataCh <-chan []byte) {
+func dataProcessor(dataCh <-chan []byte) { // dùng goroutine bất đồng bộ để xử lý và gửi data
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -230,7 +232,7 @@ func dataProcessor(dataCh <-chan []byte) {
 			batch = append(batch, msg)
 		case <-ticker.C:
 			if len(batch) > 0 {
-				sendBatch(batch)
+				go sendBatch(batch) // thêm go để  thực hiện bất đồng bộ
 				batch = nil
 			}
 		}
