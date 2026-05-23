@@ -8,6 +8,8 @@
         "dev": "concurrently \"npm run dev:master\" \"npm run dev:worker\""
     },
     "dependencies": {
+        "archiver": "^8.0.0",
+        "axios": "^1.16.1",
         "bcryptjs": "^3.0.3",
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",

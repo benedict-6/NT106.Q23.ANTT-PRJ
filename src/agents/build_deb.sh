@@ -27,6 +27,7 @@ sudo ./ebpf/tools/ecc ebpf/netpro.bpf.c ebpf/netpro.h || echo "ecc might have fa
 go build -o ../$DEB_DIR/opt/siem-agent/NetProCollector main.go
 cp ebpf/package.json ../$DEB_DIR/opt/siem-agent/ebpf/
 cp ebpf/tools/ecli ../$DEB_DIR/opt/siem-agent/ebpf/tools/
+chmod +x ../$DEB_DIR/opt/siem-agent/ebpf/tools/ecli
 cd ..
 
 echo "4. Creating start script..."
