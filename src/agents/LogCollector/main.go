@@ -108,33 +108,40 @@ func parseAuditLog(line, filePath string) Event {
 			}
 		}
 	}
-	if _, ok := meta["timestamp"]; !ok {
-		meta["timestamp"] = time.Now().Format("2006-01-02T15:04:05.000Z")
+	// Build a clean metadata map matching the exact JSON schema documented
+	cleanMeta := map[string]interface{}{
+		"file":     filePath,
+		"type_log": "auditLog",
 	}
 
-	if uid, ok := meta["uid"]; ok {
-		meta["user_id"] = uid
-	}
-
-	if acct, ok := meta["acct"]; ok {
-		meta["user"] = acct
-	}
-
-	if exe, ok := meta["exe"]; ok {
-		meta["process"] = exe
-	}
-
-	if res, ok := meta["res"]; ok {
-		meta["result"] = res
+	if ts, ok := meta["timestamp"]; ok {
+		cleanMeta["timestamp"] = ts
+	} else {
+		cleanMeta["timestamp"] = time.Now().Format("2006-01-02T15:04:05.000Z")
 	}
 
 	if t, ok := meta["type"]; ok {
-		meta["action"] = t
+		cleanMeta["action"] = t
+	}
+	if pid, ok := meta["pid"]; ok {
+		cleanMeta["pid"] = pid
+	}
+	if uid, ok := meta["uid"]; ok {
+		cleanMeta["user_id"] = uid
+	}
+	if acct, ok := meta["acct"]; ok {
+		cleanMeta["user"] = acct
+	}
+	if exe, ok := meta["exe"]; ok {
+		cleanMeta["process"] = exe
+	}
+	if res, ok := meta["res"]; ok {
+		cleanMeta["result"] = res
 	}
 
 	return Event{
 		Type:     "log_monitoring",
-		Metadata: meta,
+		Metadata: cleanMeta,
 	}
 }
 
@@ -189,7 +196,7 @@ func parseSyslog(line, filePath string) Event {
 }
 
 // Regex phân tích chi tiết log sshd và sudo của auth log
-var sshdRegex = regexp.MustCompile(`^(?P<log_time>[A-Z][a-z]{2}\s+\d+\s\d{2}:\d{2}:\d{2})\s+(?P<host>\S+)\s+(?P<service>sshd)\[(?P<pid>\d+)\]:\s+(?P<action>Accepted\s+\S+|Failed\s+\S+|Invalid user|Disconnected|Connection closed)(?:\s+for\s+(?:invalid user\s+)?(?P<user>\S+))?\s+from\s+(?P<src_ip>\S+)\s+port\s+(?P<port>\d+)`)
+var sshdRegex = regexp.MustCompile(`^(?P<log_time>[A-Z][a-z]{2}\s+\d+\s\d{2}:\d{2}:\d{2})\s+(?P<host>\S+)\s+(?P<service>sshd)\[(?P<pid>\d+)\]:\s+(?P<action>Accepted\s+\S+|Failed\s+\S+|Invalid user|Disconnected|Connection closed)(?:.*?\s(?:user\s+|for\s+)(?P<user>\S+))?\s+from\s+(?P<src_ip>\S+)\s+port\s+(?P<port>\d+)`)
 
 var sudoRegex = regexp.MustCompile(`sudo:.*COMMAND=(?P<cmd>.+)`)
 

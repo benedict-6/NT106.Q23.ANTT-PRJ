@@ -4,6 +4,10 @@
 import crypto from 'crypto'
 import pool from '../../shared/database/connect.js'
 import { GCMencrypt, GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
+import archiver from 'archiver';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 
 const dashController = {
@@ -99,13 +103,40 @@ const dashController = {
 			const config = {
 				agent_id: agent.agent_id,
 				secret_key: rawKey,
-				server_url: SERVER_URL,
-				lb_url: LOAD_BALANCE_URL
+				server_url: process.env.MASTER_NODE_URL || 'http://localhost:8080',
+				lb_url: process.env.LOAD_BALANCE_URL || ''
 			};
 
-			res.setHeader('Content-Disposition', `attachment; filename="agent_config_${agent_id}.json"`);
-			res.setHeader('Content-Type', 'application/json');
-			res.json(config);
+			// 1. Cấu hình luồng nén ZIP trực tiếp trên RAM
+			const archive = archiver('zip', { zlib: { level: 9 } });
+
+			res.setHeader('Content-Type', 'application/zip');
+			res.setHeader('Content-Disposition', `attachment; filename="siem-agent-${agent_id}.zip"`);
+
+			archive.on('error', function(err) {
+				console.error('Lỗi khi nén file ZIP: ', err);
+				res.status(500).send({error: err.message});
+			});
+
+			// Gắn luồng nén vào response
+			archive.pipe(res);
+
+			// 2. Thêm file JSON Config sinh ra từ RAM vào file ZIP
+			archive.append(JSON.stringify(config, null, 2), { name: 'agent_config.json' });
+
+			// 3. Đọc file .deb tĩnh và nhét vào file ZIP
+			const __filename = fileURLToPath(import.meta.url);
+			const __dirname = path.dirname(__filename);
+			const debFilePath = path.join(__dirname, '../download/siem-agent_1.0.0_amd64.deb'); 
+			
+			if (fs.existsSync(debFilePath)) {
+				archive.file(debFilePath, { name: 'siem-agent_1.0.0_amd64.deb' });
+			} else {
+				console.warn('Cảnh báo: Không tìm thấy file .deb tại', debFilePath);
+			}
+
+			// Hoàn tất đóng gói ZIP và gửi về Client
+			await archive.finalize();
 		}
 		catch (err) {
 			console.error('Lỗi khi tạo config download: ', err);

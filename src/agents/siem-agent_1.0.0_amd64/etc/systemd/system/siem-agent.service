@@ -1,0 +1,14 @@
+[Unit]
+Description=SIEM Endpoint Agent
+After=network.target auditd.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/siem-agent
+ExecStart=/bin/bash /opt/siem-agent/start.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

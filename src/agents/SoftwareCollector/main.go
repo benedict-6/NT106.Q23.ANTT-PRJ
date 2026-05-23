@@ -42,7 +42,7 @@ func main() {
 	var conn net.Conn
 	var err error
 
-	// Try to connect to socket with retry
+	// Kết nối tới Unix socket của agentCollector
 	for {
 		conn, err = net.Dial("unix", socketPath)
 		if err == nil {
@@ -54,8 +54,11 @@ func main() {
 	defer conn.Close()
 	log.Println("SoftwareCollector: Connected to agentCollector")
 
+	lastPackages := make(map[string]string)
+	lastFullScan := time.Now().Add(-24 * time.Hour) // Đảm bảo lần đầu tiên sẽ gửi full list
+
 	for {
-		// Use dpkg-query to list packages
+		// Quét toàn bộ phần mềm hiện tại
 		cmd := exec.Command("sh", "-c", `dpkg-query -W -f='{"name":"${binary:Package}","version":"${Version}"}\n'`)
 		var out bytes.Buffer
 		cmd.Stdout = &out
@@ -63,14 +66,44 @@ func main() {
 
 		if err != nil {
 			log.Printf("SoftwareCollector: dpkg-query failed: %v", err)
-		} else {
-			packages := parsePackages(out.String())
+			time.Sleep(1 * time.Minute)
+			continue
+		}
 
+		currentPackages := parsePackages(out.String())
+		currentMap := make(map[string]string)
+		var newOrUpdated []map[string]string
+
+		for _, pkg := range currentPackages {
+			name := pkg["name"]
+			version := pkg["version"]
+			currentMap[name] = version
+
+			if oldVersion, exists := lastPackages[name]; !exists || oldVersion != version {
+				newOrUpdated = append(newOrUpdated, pkg)
+			}
+		}
+
+		now := time.Now()
+		is12HoursPassed := now.Sub(lastFullScan) >= 12*time.Hour
+
+		var packagesToSend []map[string]string
+
+		if is12HoursPassed {
+			log.Println("SoftwareCollector: 12 hours passed or initial scan. Sending FULL software list.")
+			packagesToSend = currentPackages
+			lastFullScan = now
+		} else if len(newOrUpdated) > 0 {
+			log.Printf("SoftwareCollector: Detected %d NEW or UPDATED packages. Sending PARTIAL software list.\n", len(newOrUpdated))
+			packagesToSend = newOrUpdated
+		}
+
+		if len(packagesToSend) > 0 {
 			event := Event{
 				Type: "software_list",
 				Metadata: map[string]interface{}{
-					"packages": packages,
-					"timestamp": time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+					"packages":  packagesToSend,
+					"timestamp": now.UTC().Format("2006-01-02T15:04:05.000Z"),
 				},
 			}
 
@@ -97,9 +130,12 @@ func main() {
 					time.Sleep(2 * time.Second)
 				}
 			}
+
+			// Cập nhật lại state sau khi gửi thành công
+			lastPackages = currentMap
 		}
 
-		// Collect every 12 hour
-		time.Sleep(12 * time.Hour)
+		// Quét mỗi phút để kịp thời phát hiện app mới, nhưng chỉ gửi lên khi có app mới hoặc khi đủ 12 tiếng
+		time.Sleep(1 * time.Minute)
 	}
 }

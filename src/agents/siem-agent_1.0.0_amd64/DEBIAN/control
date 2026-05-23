@@ -1,0 +1,10 @@
+Package: siem-agent
+Version: 1.0.0
+Section: custom
+Priority: optional
+Architecture: amd64
+Depends: auditd
+Maintainer: Admin <admin@example.com>
+Description: SIEM Endpoint Agent
+ Hệ thống giám sát bảo mật thiết bị đầu cuối cho SIEM.
+ Bao gồm thu thập Log, File Integrity, Network (eBPF) và Software.

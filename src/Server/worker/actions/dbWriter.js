@@ -87,13 +87,6 @@ export const writeLogToDB = async (parsedData) => {
             console.log(`[DBWriter] Đã ghi Log Monitoring vào log_monitoring cho Agent [${agent_id}]`);
             return { id: result.rows[0]?.log_monitoring_id, createdAt };
 
-        } else {
-            const result = await pool.query(
-                `INSERT INTO logs (detail) VALUES ($1) RETURNING log_id`,
-                [JSON.stringify(parsedData)]
-            );
-            console.log(`[DBWriter] Đã ghi Generic log vào logs cho Agent [${agent_id}]`);
-            return { id: result.rows[0]?.log_id, createdAt };
         }
     } catch (err) {
         console.error(`[DBWriter] Lỗi khi ghi dữ liệu vào CSDL cho Agent [${agent_id}]:`, err.message);
@@ -110,7 +103,7 @@ export const saveRuleAlert = async (triggeredAlerts, alertObj, logId, createdAtD
             let net_pro_id = null, net_pro_created_at = null;
             let file_log_id = null, file_integrity_created_at = null;
             let log_monitoring_id = null, log_monitoring_created_at = null;
-            let log_id = null;
+            let app_id = null;
 
             if (logType === 'net_pro') {
                 net_pro_id = logId;
@@ -121,10 +114,8 @@ export const saveRuleAlert = async (triggeredAlerts, alertObj, logId, createdAtD
             } else if (logType === 'log_monitoring') {
                 log_monitoring_id = logId;
                 log_monitoring_created_at = createdAtData;
-            } else if (logType === 'software_list') {
-                // software_list lưu vào applications (không dùng hypertable hay khóa ngoại log_id)
-            } else {
-                log_id = logId; // UUID cho generic logs
+            } else if (logType === 'software_list' || logType === 'software_vulnerability') {
+                app_id = logId;
             }
 
             await pool.query(
@@ -133,14 +124,40 @@ export const saveRuleAlert = async (triggeredAlerts, alertObj, logId, createdAtD
                     net_pro_id, net_pro_created_at,
                     file_log_id, file_integrity_created_at,
                     log_monitoring_id, log_monitoring_created_at,
-                    log_id
+                    app_id
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
                 [
                     alert.agent_id, alert.rule_id, alert.packet_level, alertObj || false, new Date().toISOString(),
                     net_pro_id, net_pro_created_at,
                     file_log_id, file_integrity_created_at,
                     log_monitoring_id, log_monitoring_created_at,
-                    log_id
+                    app_id
+                ]
+            );
+        }
+    }
+};
+
+export const saveRuleAlertSoftware = async (cveList, agent_id, app_id) => {
+    if (cveList && cveList.length > 0) {
+        for (const cve of cveList) {
+
+            // 1. Tự động đăng ký CVE như một Rule vào bảng detection_rules (Nếu chưa có)
+            // Tránh lỗi vi phạm khóa ngoại (Foreign Key) khi insert vào rule_alert
+            await pool.query(
+                `INSERT INTO detection_rules (rule_id, rule_name, packet_level, category, data_source)
+                 VALUES ($1, $2, $3, $4, $5)
+                 ON CONFLICT (rule_id) DO NOTHING`,
+                [cve.id, `CVE: ${cve.description.substring(0, 100)}...`, 15, 'CVE_Software', 'software_list']
+            );
+
+            // 2. Ghi cảnh báo vào bảng rule_alert
+            await pool.query(
+                `INSERT INTO rule_alert (
+                    agent_id, rule_id, packet_level, alert, app_id
+                ) VALUES ($1, $2, $3, $4, $5)`,
+                [
+                    agent_id, cve.id, 15, true, app_id
                 ]
             );
         }

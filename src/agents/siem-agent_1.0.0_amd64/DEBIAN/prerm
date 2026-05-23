@@ -1,0 +1,3 @@
+#!/bin/bash
+systemctl stop siem-agent
+systemctl disable siem-agent
