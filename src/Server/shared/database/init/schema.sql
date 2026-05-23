@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS applications (
     agent_id TEXT NOT NULL,
     software_name TEXT,
     _version TEXT,
+    _timestamp TIMESTAMPTZ,
     CONSTRAINT fk_application_agent FOREIGN KEY (agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE
 );
 
@@ -147,8 +148,8 @@ CREATE TABLE IF NOT EXISTS rule_alert (
     log_monitoring_id BIGINT,
     log_monitoring_created_at TIMESTAMPTZ,
 
-    -- Nguồn từ bảng logs (không phải Hypertable nên chỉ cần 1 ID)
-    log_id UUID,
+    -- Nguồn từ bảng software_list (không phải Hypertable nên chỉ cần 1 ID)
+    app_id BIGINT,
 
     PRIMARY KEY (rule_alert_id, created_at),
 
@@ -175,10 +176,10 @@ CREATE TABLE IF NOT EXISTS rule_alert (
         FOREIGN KEY (log_monitoring_id, log_monitoring_created_at) 
         REFERENCES log_monitoring(log_monitoring_id, created_at) ON DELETE CASCADE,
 
-    -- Ràng buộc khóa ngoại đến logs
-    CONSTRAINT fk_rule_alert_logs 
-        FOREIGN KEY (log_id) 
-        REFERENCES logs(log_id) ON DELETE CASCADE
+    -- Ràng buộc khóa ngoại đến applications
+    CONSTRAINT fk_rule_alert_apps 
+        FOREIGN KEY (app_id) 
+        REFERENCES applications(app_id) ON DELETE CASCADE
 );
 
 -- =============================================

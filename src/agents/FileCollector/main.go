@@ -241,8 +241,12 @@ func main() {
 
 						metadata["timestamp"] = now.Format("2006-01-02T15:04:05.000Z")
 
-						info, _ := os.Stat(fullPath)
-						metadata["mtime"] = info.ModTime().UTC().Format("2006-01-02T15:04:05.000Z")
+						info, err := os.Stat(fullPath)
+						if err == nil && info != nil {
+							metadata["mtime"] = info.ModTime().UTC().Format("2006-01-02T15:04:05.000Z")
+						} else {
+							metadata["mtime"] = now.Format("2006-01-02T15:04:05.000Z")
+						}
 
 						if isNoise(fullPath) || !shouldProcess(fullPath) {
 							continue

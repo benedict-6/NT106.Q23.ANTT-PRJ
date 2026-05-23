@@ -1,8 +1,8 @@
 import pool from "../../shared/database/connect.js";
 import { evaluateData } from "./ruleMatcher.js";
-import { writeLogToDB, saveRuleAlert } from "../actions/dbWriter.js";
+import { writeLogToDB, saveRuleAlert, saveRuleAlertSoftware } from "../actions/dbWriter.js";
 import { parseAgentData } from "./parser.js";
-
+import axios from "axios";
 /**
  * Xử lý dữ liệu File Integrity Monitoring (FIM)
  */
@@ -73,6 +73,29 @@ export const handleAgentLogReport = async (decodedData, agent_id) => {
 };
 
 /**
+ * Lấy danh sách CVE từ NVD API
+ * Lưu ý: NVD API giới hạn rate limit (5 req/30s nếu không có API key).
+ */
+export const checkCVEFromNVD = async (softwareName, version) => {
+	try {
+		// Tìm kiếm theo keyword gồm tên phần mềm và phiên bản
+		const response = await axios.get(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${softwareName} ${version}`);
+
+		if (response.data && response.data.vulnerabilities && response.data.vulnerabilities.length > 0) {
+			return response.data.vulnerabilities.map(v => ({
+				id: v.cve.id,
+				description: v.cve.descriptions.find(d => d.lang === 'en')?.value || 'No description',
+				severity: v.cve.metrics?.cvssMetricV31?.[0]?.cvssData?.baseSeverity || 'UNKNOWN'
+			}));
+		}
+		return [];
+	} catch (err) {
+		console.error(`[NVD API] Lỗi khi lấy CVE cho ${softwareName} ${version}:`, err.message);
+		return [];
+	}
+};
+
+/**
  * Xử lý dữ liệu danh sách phần mềm và Vulnerability (CVE)
  */
 export const handleAgentSoftware = async (agentPayload) => {
@@ -81,18 +104,28 @@ export const handleAgentSoftware = async (agentPayload) => {
 		const softwareList = agentPayload.payload.packages || agentPayload.payload;
 		if (Array.isArray(softwareList)) {
 			for (const sw of softwareList) {
+				const swName = sw.name || sw.software_name;
+				const swVersion = sw.version || sw._version;
+
 				const singleSwEvent = { ...agentPayload, payload: sw };
 				const { triggeredAlerts, alertObj } = evaluateData(singleSwEvent);
+				const dbResult = await writeLogToDB(singleSwEvent);
 
 				if (triggeredAlerts && triggeredAlerts.length > 0) {
 					// Lỗ hổng phần mềm không có ID hypertable, truyền null
-					await saveRuleAlert(triggeredAlerts, alertObj, null, agentPayload.timestamp, agentPayload.type);
+					await saveRuleAlert(triggeredAlerts, alertObj, dbResult.id, agentPayload.timestamp, agentPayload.type);
 				}
 
-				await pool.query(
-					`INSERT INTO applications (agent_id, software_name, _version) VALUES ($1, $2, $3)`,
-					[agentPayload.agent_id, sw.name || sw.software_name, sw.version || sw._version]
-				);
+				// Kiểm tra CVE từ NVD
+				const cveList = await checkCVEFromNVD(swName, swVersion);
+				if (cveList.length > 0) {
+					// Lưu CVE vào CSDL
+					await saveRuleAlertSoftware(cveList, agentPayload.agent_id, dbResult?.id);
+				}
+
+				// Delay 6 giây để tránh bị block do rate limit của NVD (không có key)
+				// Nếu có API key, bạn có thể truyền header apiKey và bỏ delay này.
+				await new Promise(resolve => setTimeout(resolve, 6000));
 			}
 		}
 	} catch (err) {
