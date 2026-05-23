@@ -3,7 +3,7 @@ import { Check, ChevronRight } from "lucide-react";
 export const SidebarIcon = ({ icon, active = false, onClick }) => {
   return (
     <div 
-      className={`p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-gray-500 hover:text-white hover:bg-[#1A1A1A]'}`}
+      className={`p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-white hover:text-white hover:bg-[#1A1A1A]'}`}
       onClick={onClick}>
         {icon}
     </div>
