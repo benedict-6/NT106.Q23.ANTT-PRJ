@@ -1,11 +1,16 @@
 import { Check, ChevronRight } from "lucide-react"; 
 
-export const SidebarIcon = ({ icon, active = false, onClick }) => {
+export const SidebarIcon = ({ icon, active = false, onClick, title }) => {
   return (
     <div 
-      className={`p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-white hover:text-white hover:bg-[#1A1A1A]'}`}
+      className={`relative group p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-white hover:text-white hover:bg-[#1A1A1A]'}`}
       onClick={onClick}>
         {icon}
+        {title && (
+          <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0D0D0D] font-mono font-bold tracking-widest text-blue-400 text-xs whitespace-nowrap rounded-none opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 border border-[#2A2A2A] shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+            {title}
+          </span>
+        )}
     </div>
   );
 }

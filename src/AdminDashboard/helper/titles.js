@@ -5,7 +5,7 @@ export const headerTitle = [
     {route: "security/fim"   , title: ["Security", "File Integrity Monitor"]},
     {route: "security/user"  , title: ["Security", "List current users"]},
     {route: "security/apps"  , title: ["Security", "List current applications"]},
-    {route: "security/netpro", title: ["Security", "List current netpro"]},
+    {route: "security/netpro", title: ["Security", "List current NETWORK & PROCCESS"]},
     {route: "security/proc"  , title: ["Security", "List current processes"]},
     {route: "security/logs"  , title: ["Security", "List network logs"]},
     {route: "security/file"  , title: ["Security", "List file logs"]},

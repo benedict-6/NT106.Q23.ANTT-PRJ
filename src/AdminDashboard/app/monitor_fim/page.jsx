@@ -8,10 +8,14 @@ import { Search, Clock, Activity, ShieldCheck, CircleAlert, ChevronLeft, Chevron
 import { SideBar } from '../../components/sidebar.jsx';
 import { AppHeader } from '../../components/header.jsx';
 import { LibreWolf } from '../../helper/icons.jsx';
+import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
 export default function FimDashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  
+  const { logs: socketLogs, isConnected } = useDashboardSocket();
+  const [displayedLogs, setDisplayedLogs] = useState([]);
   
   const [selectedAgent, setSelectedAgent] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,18 +49,19 @@ export default function FimDashboard() {
     };
 
     fetchAgents();
-    setFimLogs([
-        { id: 1, agent_id: "AGENT-001", file_path: '/etc/shadow', event_type: 'MODIFIED', timestamp: new Date().toISOString(), size: 2048, uid: 0, gid: 0, permission: '0644' },
-        { id: 2, agent_id: "AGENT-002", file_path: '/var/www/html/index.php', event_type: 'DELETED', timestamp: new Date(Date.now() - 3600000).toISOString(), size: 1024, uid: 33, gid: 33, permission: null },
-        { id: 3, agent_id: "AGENT-001", file_path: '/usr/bin/nc', event_type: 'ADDED', timestamp: new Date(Date.now() - 7200000).toISOString(), size: 55200, uid: 0, gid: 0, permission: '0755' },
-    ]);
   }, [router]);
 
+  useEffect(() => {
+    if (isLive) {
+      setDisplayedLogs(socketLogs.filter(log => log.type === 'file_integrity'));
+    }
+  }, [socketLogs, isLive]);
+
   const agentTabs = useMemo(() => {
-    const listFromLogs = [...new Set(fimLogs.map(log => log.agent_id))];
+    const listFromLogs = [...new Set(displayedLogs.map(log => log.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-    return ['all', ...new Set([...listFromApi, ...listFromLogs])];
-  }, [agents, fimLogs]);
+    return ['all', ...new Set([...listFromApi, ...listFromLogs])].slice(0, 4); // Limit to 3 agents + 'all'
+  }, [agents, displayedLogs]);
 
   const handleCycleAgent = (direction) => {
     const currentIndex = agentTabs.indexOf(selectedAgent);
@@ -69,40 +74,16 @@ export default function FimDashboard() {
     setSelectedAgent(agentTabs[nextIndex]);
   };
 
-  useEffect(() => {
-    if (!isLive) return;
-
-    const interval = setInterval(() => {
-      const targetPaths = ['/etc/passwd', '/etc/hosts', '/bin/bash', '/root/.ssh/authorized_keys', '/var/log/auth.log'];
-      const events = ['MODIFIED', 'ADDED', 'DELETED'];
-      const activeAgents = agentTabs.filter(id => id !== 'all');
-      
-      const simulatedLog = {
-        id: Date.now(),
-        agent_id: activeAgents[Math.floor(Math.random() * activeAgents.length)] || "AGENT-001",
-        file_path: targetPaths[Math.floor(Math.random() * targetPaths.length)],
-        event_type: events[Math.floor(Math.random() * events.length)],
-        timestamp: new Date().toISOString(),
-        size: Math.floor(Math.random() * 10000) + 500,
-        uid: 0,
-        gid: 0,
-        permission: Math.random() > 0.3 ? '0700' : '0644'
-      };
-
-      setFimLogs(prev => [simulatedLog, ...prev.slice(0, 14)]);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [isLive, agentTabs]);
+  // Removed mock setInterval
 
   const filteredLogs = useMemo(() => {
-    return fimLogs.filter(log => {
+    return displayedLogs.filter(log => {
       const matchesAgent = selectedAgent === 'all' || log.agent_id === selectedAgent;
-      const matchesSearch = log.file_path.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            log.event_type.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = log.file_path?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            log.event_type?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesAgent && matchesSearch;
     });
-  }, [fimLogs, selectedAgent, searchQuery]);
+  }, [displayedLogs, selectedAgent, searchQuery]);
 
   if (!mounted) return null;
 
@@ -129,7 +110,7 @@ export default function FimDashboard() {
                   <LibreWolf/>
                 </div>
                 <div>
-                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">FIM</h3>
+                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">FIM {isConnected ? <span className="text-green-500 text-xs ml-2">● CONNECTED</span> : <span className="text-red-500 text-xs ml-2">● DISCONNECTED</span>}</h3>
                 </div>
               </div>
 

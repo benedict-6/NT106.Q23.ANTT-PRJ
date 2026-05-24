@@ -64,6 +64,22 @@ export default function WebsocketHandler(port) {
 				if (data.type === 'AGENT_LOG') {
 					console.log(`[Master] Nhận Log từ Worker [${ws.workerID}]:`, data.payload);
 					// Lưu DB...
+
+					// Chuyển tiếp cho UI
+					if (activeUIs && activeUIs.size > 0) {
+						const logMessage = JSON.stringify({
+							type: 'NEW_LOG_UI',
+							agent_id: data.agent_id,
+							payload: data.payload,
+							time: new Date().toISOString()
+						});
+
+						activeUIs.forEach(uiClient => {
+							if (uiClient.readyState === 1) {
+								uiClient.send(logMessage);
+							}
+						});
+					}
 				}
 
 				if (data.type === 'UPDATE_LAST_ACTIVE') {

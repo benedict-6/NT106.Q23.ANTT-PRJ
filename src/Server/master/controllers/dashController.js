@@ -4,6 +4,7 @@
 import crypto from 'crypto'
 import pool from '../../shared/database/connect.js'
 import { GCMencrypt, GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
+import { ZipArchive } from 'archiver';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -15,7 +16,7 @@ const archiver = require('archiver');
 const dashController = {
 	// Tạo agent mới, gắn user_id từ JWT
 	createAgent: async (req, res) => {
-		const { description } = req.body;
+		const { description, name } = req.body;
 		const userId = req.user.userId; // Lấy từ JWT middleware
 
 		try {
@@ -32,9 +33,9 @@ const dashController = {
 			// Save to DB 
 			// Secret key is encrypted 
 			await pool.query(
-				`INSERT INTO agents (agent_id, user_id, secret_key, secret_key_iv, secret_key_auth_tag, agent_description, agent_status)
-				 VALUES ($1, $2, $3, $4, $5, $6, 'Active')`,
-				[agentID, userId, ciphetobj.cipherText, ciphetobj.iv, ciphetobj.tag, description || 'No Description']
+				`INSERT INTO agents (agent_id, user_id, secret_key, secret_key_iv, secret_key_auth_tag, agent_description, agent_status, hostname)
+				 VALUES ($1, $2, $3, $4, $5, $6, 'offline', $7)`,
+				[agentID, userId, ciphetobj.cipherText, ciphetobj.iv, ciphetobj.tag, description || 'No Description', name || 'Unknown']
 			);
 
 			//Tra res
@@ -105,12 +106,12 @@ const dashController = {
 			const config = {
 				agent_id: agent.agent_id,
 				secret_key: rawKey,
-				server_url: process.env.MASTER_NODE_URL || 'http://localhost:8080',
-				lb_url: process.env.LOAD_BALANCE_URL || ''
+				server_url: process.env.SERVER_URL || 'http://localhost:3000',
+				lb_url: process.env.LOAD_BALANCER_URL || 'http://localhost:3001'
 			};
 
 			// 1. Cấu hình luồng nén ZIP trực tiếp trên RAM
-			const archive = archiver('zip', { zlib: { level: 9 } });
+			const archive = new ZipArchive({ zlib: { level: 9 } });
 
 			res.setHeader('Content-Type', 'application/zip');
 			res.setHeader('Content-Disposition', `attachment; filename="siem-agent-${agent_id}.zip"`);
@@ -142,7 +143,7 @@ const dashController = {
 		}
 		catch (err) {
 			console.error('Lỗi khi tạo config download: ', err);
-			res.status(500).json({ message: 'Lỗi server' });
+			res.status(500).json({ message: 'Lỗi server', error: err.message, stack: err.stack });
 		}
 	}
 };

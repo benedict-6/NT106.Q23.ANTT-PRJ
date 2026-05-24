@@ -1,5 +1,7 @@
 import zlib from 'zlib';
 
+import { masterkey } from '../../shared/config/index.js';
+
 /**
  * Giải nén dữ liệu Gzip gửi từ Agent
  * @param {Buffer|Uint8Array} buffer Dữ liệu nhị phân thô

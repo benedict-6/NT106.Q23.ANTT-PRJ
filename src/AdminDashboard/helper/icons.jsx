@@ -49,6 +49,6 @@ export const Files = () => <SiFiles color="#0070FF" size={25}/>
 
 export const Graph = () => <SiGraphql color="#0070FF" size={25}/>
 
-export const App = () => <SiAppimage color="white" size={22}/>
+export const App = ({size = 22}) => <SiAppimage color="white" size={size}/>
 
-export const FIM = () => <SiDatadog color="white" size={25}/>
+export const FIM = ({size = 25}) => <SiDatadog color="white" size={size}/>

@@ -11,17 +11,17 @@
 export const parseAgentData = (rawData, agent_id) => {
     try {
         //Kiểm tra các trường bắt buộc
-        if (!rawData || !agent_id || !rawData.data_type) {
-            console.error("[Parser] Dữ liệu bị thiếu các trường bắt buộc (agent_id, data_type).");
+        if (!rawData || !agent_id || (!rawData.data_type && !rawData.type)) {
+            console.error("[Parser] Dữ liệu bị thiếu các trường bắt buộc (agent_id, data_type/type).");
             return null;
         }
 
         //Chuẩn hóa dữ liệu (trước mắt 4 trường)
         const normalizedData = {
             agent_id: agent_id,
-            type: rawData.type,
+            type: rawData.type || rawData.data_type,
             timestamp: rawData.timestamp || new Date().toISOString(),
-            payload: rawData.metadata
+            payload: rawData.metadata || rawData.payload
         };
 
         // Có thể thêm các bước chuẩn hóa đặc thù khác tùy theo data_type ở đây.
