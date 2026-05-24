@@ -16,8 +16,7 @@ export default function CreateAgentPage() {
   
   const [formData, setFormData] = useState({
     agentName: '',
-    osType: 'linux',
-    description: ''
+    osType: 'linux'
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +27,7 @@ export default function CreateAgentPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateAndDownload = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.agentName.trim()) {
       alert("HỆ THỐNG: Yêu cầu định danh Agent ID!");
@@ -48,8 +47,7 @@ export default function CreateAgentPage() {
         },
         body: JSON.stringify({
           name: formData.agentName,
-          os: formData.osType,
-          description: formData.description
+          os: formData.osType
         })
       });
 
@@ -59,8 +57,22 @@ export default function CreateAgentPage() {
 
       const result = await createResponse.json();
       setSuccessData(result);
+    } catch (error) {
+      console.error("[AGENT_CREATION_ERROR]:", error);
+      alert(error.message || "Hệ thống gặp sự cố trong quá trình xử lý chuỗi.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      const downloadResponse = await fetch(`${masterUrl}/api/agents/${result.agent_id}/download-installer`, {
+  const handleDownload = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const token = localStorage.getItem('token');
+    const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
+
+    try {
+      const downloadResponse = await fetch(`${masterUrl}/api/agents/${successData.agent_id}/download-installer`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -82,10 +94,9 @@ export default function CreateAgentPage() {
       
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(fileUrl);
-
     } catch (error) {
-      console.error("[AGENT_CREATION_ERROR]:", error);
-      alert(error.message || "Hệ thống gặp sự cố trong quá trình xử lý chuỗi.");
+      console.error("[AGENT_DOWNLOAD_ERROR]:", error);
+      alert(error.message || "Hệ thống gặp sự cố trong quá trình tải về.");
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +148,7 @@ export default function CreateAgentPage() {
                     </div>
                   </div>
 
-                  <form onSubmit={handleCreateAndDownload} className="space-y-5 font-mono text-md">
+                  <form className="space-y-5 font-mono text-md">
                     <div className="flex flex-col gap-2">
                       <span className="text-lg font-bold tracking-tight text-gray-400 uppercase">Agent Name</span>
                       <input
@@ -183,33 +194,41 @@ export default function CreateAgentPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-md font-bold tracking-widest text-gray-400 uppercase">Configuration</span>
-                      <textarea
-                        name="description"
-                        rows="3"
-                        placeholder="Configure as guide docs"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        disabled={isLoading || successData}
-                        className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-4 py-3 text-md text-gray-300 placeholder-gray-700 focus:outline-none focus:border-blue-500 disabled:opacity-50 resize-none transition-colors"
-                      />
-                    </div>
-                    {!successData && (
+                    {!successData ? (
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={handleCreate}
                         disabled={isLoading}
                         className="px-4 flex items-center justify-center gap-2 bg-blue-600 text-white font-bold tracking-widest uppercase py-3 border-b-2 border-blue-400 hover:bg-blue-700 shadow-[0_0_15px_rgba(59,130,246,0.2)] rounded-sm transition-all duration-300 disabled:opacity-50"
                       >
                         {isLoading ? (
                           <>
                             <Loader2 size={16} className="animate-spin" />
-                            Đang mã hóa định danh & đóng gói binary...
+                            Đang mã hóa định danh...
+                          </>
+                        ) : (
+                          <>
+                            <GodotEngine />
+                            Create Agent
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleDownload}
+                        disabled={isLoading}
+                        className="px-4 flex items-center justify-center gap-2 bg-green-600 text-white font-bold tracking-widest uppercase py-3 border-b-2 border-green-500 hover:bg-green-700 shadow-[0_0_15px_rgba(34,197,94,0.2)] rounded-sm transition-all duration-300 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Đang đóng gói binary...
                           </>
                         ) : (
                           <>
                             <Download size={20} />
-                            download
+                            Download Agent
                           </>
                         )}
                       </button>
@@ -268,7 +287,7 @@ export default function CreateAgentPage() {
                     <button 
                       onClick={() => {
                         setSuccessData(null);
-                        setFormData({ agentName: '', osType: 'linux', description: '' });
+                        setFormData({ agentName: '', osType: 'linux' });
                       }}
                       className="w-full text-center border border-[#2A2A2A] hover:border-blue-500/50 text-gray-500 hover:text-blue-400 font-mono text-xs py-2.5 rounded-none transition-colors duration-200 uppercase tracking-widest bg-[#0A0A0A]"
                     >

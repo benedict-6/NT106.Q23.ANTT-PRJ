@@ -48,19 +48,19 @@ const NetproPage = () => {
 
   const [agentId, setAgentId] = useState(uniqueAgentList[0] || "");
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState("90"); 
+  const [timeRange, setTimeRange] = useState("90");
   const [isLive, setIsLive] = useState(true);
   const [sortOrder, setSortOrder] = useState("desc");
 
   const handleCycleAgent = (direction) => {
     const currentIndex = uniqueAgentList.indexOf(agentId);
     if (currentIndex === -1) return;
-    
+
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    
+
     if (nextIndex >= uniqueAgentList.length) nextIndex = 0;
     if (nextIndex < 0) nextIndex = uniqueAgentList.length - 1;
-    
+
     setAgentId(uniqueAgentList[nextIndex]);
   };
 
@@ -75,14 +75,14 @@ const NetproPage = () => {
   const filteredAndSortedLogs = useMemo(() => {
     return MOCK_NETPRO_DATABASE.filter((log) => {
       if (log.agent_id !== agentId) return false;
-      
+
       if (searchQuery && !log.comm.toLowerCase().includes(searchQuery.toLowerCase()) && !log.event_type.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
       const pullDate = new Date(log.timestamp);
-      const currentDate = new Date(); 
+      const currentDate = new Date();
       const diffTime = Math.abs(currentDate - pullDate);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
 
       return true;
@@ -112,7 +112,7 @@ const NetproPage = () => {
 
     MOCK_NETPRO_ALERTS.forEach((alert) => {
       if (alert.agent_id !== agentId) return;
-      
+
       const alertTime = new Date(alert.timestamp);
       const diffMs = Math.abs(now - alertTime);
       const diffMins = diffMs / (1000 * 60);
@@ -134,13 +134,13 @@ const NetproPage = () => {
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <AppHeader route={'security/netpro'} />
- 
+
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none overflow-hidden z-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/5 rounded-full blur-[160px]" />
           <div className="scanline opacity-10" />
         </div>
         <div className="flex-1 overflow-y-auto py-6 px-4 relative z-10 w-full">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
@@ -152,7 +152,7 @@ const NetproPage = () => {
                   <AlwaysData />
                 </div>
                 <div>
-                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">Netpro</h3>
+                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">NETWORK & PROCCESS</h3>
                 </div>
               </div>
 
@@ -170,11 +170,10 @@ const NetproPage = () => {
                     <button
                       key={id}
                       onClick={() => setAgentId(id)}
-                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${
-                        agentId === id
-                          ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                          : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
-                      }`}
+                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${agentId === id
+                        ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                        : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
+                        }`}
                     >
                       {id}
                     </button>
@@ -195,12 +194,12 @@ const NetproPage = () => {
               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
               <div className="absolute top-0 right-0 w-2 h-8 bg-blue-500/10" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-              
+
               <div className="bg-[#111] p-6 border border-[#232323] space-y-6">
-                
+
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4">
                   <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                    
+
                     <div className="flex flex-col gap-2">
                       <span className="text-md font-bold tracking-widest text-blue-500 uppercase font-mono">Time Interval</span>
                       <select
@@ -229,11 +228,10 @@ const NetproPage = () => {
                   <div className="flex items-center self-end md:self-center">
                     <button
                       onClick={() => setIsLive(!isLive)}
-                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${
-                        isLive 
-                          ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]" 
-                          : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${isLive
+                        ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
+                        : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
+                        }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
                       {isLive ? "LIVE: ON" : "LIVE: OFF"}
@@ -253,7 +251,7 @@ const NetproPage = () => {
                           <th className="py-3 px-4 cursor-pointer hover:bg-[#1c1c1c] transition-colors" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                             <div className="flex items-center gap-2">
                               CMD
-                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18}/> : <ArrowUp01 size={18}/>}</span>
+                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18} /> : <ArrowUp01 size={18} />}</span>
                             </div>
                           </th>
                           <th className="py-3 px-4">Event Type</th>
@@ -295,7 +293,7 @@ const NetproPage = () => {
                           <tr>
                             <td colSpan="10" className="py-16 h-30 text-center text-red-400 uppercase font-bold tracking-widest text-md">
                               <div className="flex items-center justify-center gap-2">
-                                <CircleAlert size={16} /> 
+                                <CircleAlert size={16} />
                                 Oops, no logs found
                               </div>
                             </td>
@@ -305,10 +303,10 @@ const NetproPage = () => {
                     </table>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center text-md font-mono text-gray-600 uppercase tracking-wider pt-2">
                   <div>
-                    Found: <span className="text-blue-400">{filteredAndSortedLogs.length}</span> result{filteredAndSortedLogs.length > 1? "s" : ""}
+                    Found: <span className="text-blue-400">{filteredAndSortedLogs.length}</span> result{filteredAndSortedLogs.length > 1 ? "s" : ""}
                   </div>
                 </div>
 
@@ -319,10 +317,10 @@ const NetproPage = () => {
               <div className="bg-[#0D0D0D]/80 backdrop-blur-xl border border-[#2A2A2A] rounded-none p-1 relative overflow-hidden group shadow-2xl">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-red-500/40 group-hover:border-red-500 transition-colors duration-500" />
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-red-500/40 group-hover:border-red-500 transition-colors duration-500" />
-                
+
                 <div className="bg-[#111] p-4 border border-[#232323] space-y-4">
                   <div className="flex items-center gap-2 pb-2">
-                    <Hackaday/>
+                    <Hackaday />
                     <span className="text-md font-bold font-mono text-red-400 uppercase tracking-wider">Alerts</span>
                   </div>
 
@@ -346,11 +344,10 @@ const NetproPage = () => {
                               <tr key={alert.id} className="hover:bg-red-950/20 transition-colors">
                                 <td className="py-2.5 px-3 text-sm text-white font-semibold">{alert.rule_name}</td>
                                 <td className="py-3 px-3">
-                                  <span className={`text-sm font-bold px-1.5 py-0.5 ${
-                                    alert.severity === "CRITICAL" ? "bg-red-900 text-red-500" :
+                                  <span className={`text-sm font-bold px-1.5 py-0.5 ${alert.severity === "CRITICAL" ? "bg-red-900 text-red-500" :
                                     alert.severity === "HIGH" ? "bg-yellow-950 text-yellow-300 border border-yellow-900/40" :
-                                    "bg-amber-950 text-amber-400 border border-amber-900/40"
-                                  }`}>
+                                      "bg-amber-950 text-amber-400 border border-amber-900/40"
+                                    }`}>
                                     {alert.severity}
                                   </span>
                                 </td>
@@ -376,10 +373,10 @@ const NetproPage = () => {
               <div className="bg-[#0D0D0D]/80 backdrop-blur-xl border border-[#2A2A2A] rounded-none p-1 relative overflow-hidden group shadow-2xl">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-                
+
                 <div className="bg-[#111] p-4 border border-[#232323] space-y-4">
                   <div className="flex items-center gap-2 pb-2">
-                    <WireShark/>
+                    <WireShark />
                     <span className="text-md font-bold font-mono text-blue-600 uppercase tracking-wider">Alert traffic</span>
                   </div>
 

@@ -32,7 +32,7 @@ export const AppHeader = ({route}) => {
             </div>
                 
             <div className="flex items-center space-x-4 text-base">
-                <button className="text-blue-400 hover:text-blue-300 transition-colors">Save</button>
+
                 <button className="bg-[#ED2939] hover:bg-[#FF3800] text-white px-4 py-1.5 rounded font-medium flex items-center space-x-2" 
                     ><Link href={"/start"}>Clean</Link></button>
                 <button onClick={handleAddAgent} className="bg-[#1D4ED8] hover:bg-[#2563EB] text-white px-4 py-1.5 rounded font-medium flex items-center space-x-2">
