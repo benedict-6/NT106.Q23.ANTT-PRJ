@@ -3,7 +3,7 @@ import { Check, ChevronRight } from "lucide-react";
 export const SidebarIcon = ({ icon, active = false, onClick }) => {
   return (
     <div 
-      className={`p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-gray-500 hover:text-white hover:bg-[#1A1A1A]'}`}
+      className={`p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-white hover:text-white hover:bg-[#1A1A1A]'}`}
       onClick={onClick}>
         {icon}
     </div>
@@ -167,3 +167,22 @@ export const LogLine = ({ time, type, msg, glow = true }) => {
     </div>
   );
 }
+
+export const Windows = ({ size = 16, className = '', ...props }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      {...props}
+    >
+      <rect x="3" y="3" width="8" height="8" />
+      <rect x="13" y="3" width="8" height="8" />
+      <rect x="3" y="13" width="8" height="8" />
+      <rect x="13" y="13" width="8" height="8" />
+    </svg>
+  );
+};

@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "express": "^5.2.1",
+    "framer-motion": "^12.40.0",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "^15.4.9",
@@ -30,8 +31,8 @@
     "react-dom": "^19.2.1",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.8.1",
-    "tailwind-merge": "^3.5.0",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.11",
