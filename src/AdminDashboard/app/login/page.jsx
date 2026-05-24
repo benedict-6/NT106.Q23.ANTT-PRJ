@@ -7,10 +7,8 @@ import { Terminal, ArrowRight, AlertTriangle } from 'lucide-react';
 import { RobotFramework, BattleDotNet, KeyCDN, Github, Discord } from '../../helper/icons.jsx';
 
 import { HackerButton, RenderUIPattern } from '../../helper/renderUI.js';
-import { useNavigation } from '../../hooks/useNavigation.js';
 
 export default function LoginPage() {
-    const { handleDashboardClick, handleRegister, handleShieldClick } = useNavigation();
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
