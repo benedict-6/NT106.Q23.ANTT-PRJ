@@ -3,6 +3,8 @@ import { evaluateData } from "./ruleMatcher.js";
 import { writeLogToDB, saveRuleAlert, saveRuleAlertSoftware } from "../actions/dbWriter.js";
 import { parseAgentData } from "./parser.js";
 import axios from "axios";
+import { sendToMaster } from "../socket_client/services/serviceMasterSocket.js";
+
 /**
  * Xử lý dữ liệu File Integrity Monitoring (FIM)
  */
@@ -12,6 +14,12 @@ export const handleAgentFim = async (agentPayload) => {
 
 		// Chờ lưu log gốc và lấy ra ID sinh tự động
 		const dbResult = await writeLogToDB(agentPayload);
+
+		sendToMaster({
+			type: 'AGENT_LOG',
+			agent_id: agentPayload.agent_id,
+			payload: { ...agentPayload.payload, type: agentPayload.type, timestamp: agentPayload.timestamp, event_type: agentPayload.payload.event || agentPayload.payload.event_type, saddr: agentPayload.payload.saddr || agentPayload.payload.src_ip, daddr: agentPayload.payload.daddr || agentPayload.payload.dst_ip }
+		});
 
 		if (dbResult) {
 			const { id, createdAt } = dbResult;
@@ -35,6 +43,13 @@ export const handleAgentNetPro = async (agentPayload) => {
 	try {
 		const { triggeredAlerts, alertObj } = evaluateData(agentPayload);
 		const dbResult = await writeLogToDB(agentPayload);
+		
+		sendToMaster({
+			type: 'AGENT_LOG',
+			agent_id: agentPayload.agent_id,
+			payload: { ...agentPayload.payload, type: agentPayload.type, timestamp: agentPayload.timestamp, event_type: agentPayload.payload.event || agentPayload.payload.event_type, saddr: agentPayload.payload.saddr || agentPayload.payload.src_ip, daddr: agentPayload.payload.daddr || agentPayload.payload.dst_ip }
+		});
+
 		if (dbResult) {
 			const { id, createdAt } = dbResult;
 			await saveRuleAlert(triggeredAlerts, alertObj, id, createdAt, agentPayload.type);
@@ -57,6 +72,13 @@ export const handleAgentLog = async (agentPayload) => {
 	try {
 		const { triggeredAlerts, alertObj } = evaluateData(agentPayload);
 		const dbResult = await writeLogToDB(agentPayload);
+
+		sendToMaster({
+			type: 'AGENT_LOG',
+			agent_id: agentPayload.agent_id,
+			payload: { ...agentPayload.payload, type: agentPayload.type, timestamp: agentPayload.timestamp, event_type: agentPayload.payload.event || agentPayload.payload.event_type, saddr: agentPayload.payload.saddr || agentPayload.payload.src_ip, daddr: agentPayload.payload.daddr || agentPayload.payload.dst_ip }
+		});
+
 		if (dbResult) {
 			const { id, createdAt } = dbResult;
 			await saveRuleAlert(triggeredAlerts, alertObj, id, createdAt, agentPayload.type);
@@ -111,21 +133,27 @@ export const handleAgentSoftware = async (agentPayload) => {
 				const { triggeredAlerts, alertObj } = evaluateData(singleSwEvent);
 				const dbResult = await writeLogToDB(singleSwEvent);
 
+				sendToMaster({
+					type: 'AGENT_LOG',
+					agent_id: singleSwEvent.agent_id,
+					payload: { ...singleSwEvent.payload, type: singleSwEvent.type, timestamp: singleSwEvent.timestamp, event_type: singleSwEvent.payload.event || singleSwEvent.payload.event_type || 'Software', saddr: singleSwEvent.payload.saddr || singleSwEvent.payload.src_ip, daddr: singleSwEvent.payload.daddr || singleSwEvent.payload.dst_ip }
+				});
+
 				if (triggeredAlerts && triggeredAlerts.length > 0) {
 					// Lỗ hổng phần mềm không có ID hypertable, truyền null
 					await saveRuleAlert(triggeredAlerts, alertObj, dbResult.id, agentPayload.timestamp, agentPayload.type);
 				}
 
-				// Kiểm tra CVE từ NVD
-				const cveList = await checkCVEFromNVD(swName, swVersion);
-				if (cveList.length > 0) {
-					// Lưu CVE vào CSDL
-					await saveRuleAlertSoftware(cveList, agentPayload.agent_id, dbResult?.id);
-				}
+				// // Kiểm tra CVE từ NVD
+				// const cveList = await checkCVEFromNVD(swName, swVersion);
+				// if (cveList.length > 0) {
+				// 	// Lưu CVE vào CSDL
+				// 	await saveRuleAlertSoftware(cveList, agentPayload.agent_id, dbResult?.id);
+				// }
 
-				// Delay 6 giây để tránh bị block do rate limit của NVD (không có key)
-				// Nếu có API key, bạn có thể truyền header apiKey và bỏ delay này.
-				await new Promise(resolve => setTimeout(resolve, 6000));
+				// // Delay 6 giây để tránh bị block do rate limit của NVD (không có key)
+				// // Nếu có API key, bạn có thể truyền header apiKey và bỏ delay này.
+				// await new Promise(resolve => setTimeout(resolve, 6000));
 			}
 		}
 	} catch (err) {

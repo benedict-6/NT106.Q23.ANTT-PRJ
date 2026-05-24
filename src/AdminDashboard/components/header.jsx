@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link.js";
 import { Exit } from "@/helper/icons.jsx";
 
-export const AppHeader = ({route}) => {
+export const AppHeader = ({route, hasAlerts = false}) => {
     const router = useRouter();
     const handleAddAgent = async () => {
         alert("Chức năng tạo Agent!");
@@ -32,7 +32,7 @@ export const AppHeader = ({route}) => {
             </div>
                 
             <div className="flex items-center space-x-4 text-base">
-                <button className="text-blue-400 hover:text-blue-300 transition-colors">Save</button>
+
                 <button className="bg-[#ED2939] hover:bg-[#FF3800] text-white px-4 py-1.5 rounded font-medium flex items-center space-x-2" 
                     ><Link href={"/start"}>Clean</Link></button>
                 <button onClick={handleAddAgent} className="bg-[#1D4ED8] hover:bg-[#2563EB] text-white px-4 py-1.5 rounded font-medium flex items-center space-x-2">
@@ -45,10 +45,12 @@ export const AppHeader = ({route}) => {
                 <div className="h-6 w-[1px] bg-gray-700"></div>
                 <div className="relative cursor-pointer hover:text-white text-gray-400 transition-colors">
                     <Bell size={22} />
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-[#111]"></span>
-                    </span>
+                    {hasAlerts && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-[#111]"></span>
+                        </span>
+                    )}
                 </div>
                 <button onClick={handleLogout} className="text-red-500 hover:text-white hover:bg-red-600/40 px-3 py-1.5 rounded flex items-center space-x-2 transition-all font-bold group">
                     <Exit className="group-hover:-translate-x-1 transition-transform" />

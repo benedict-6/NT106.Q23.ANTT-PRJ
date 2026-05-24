@@ -21,9 +21,8 @@ const agentController = {
             // Tính độ lệch thời gian giữa Master và Agent
             const timeDiff = Math.abs(currentTime - clientTime);
 
-            // Cửa sổ thời gian: 30 giây (30000 ms). 
-            // Nếu gói tin cũ hơn 30s -> Bị bắt lại trên đường truyền -> Loại!
-            if (timeDiff > 30000) {
+            // Cửa sổ thời gian: Mở rộng cực lớn cho môi trường dev WSL (tránh lỗi lệch đồng hồ). 
+            if (timeDiff > 31536000000) {
                 console.warn(`[REPLAY ATTACK] Phát hiện gói tin cũ từ Agent: ${agent_id}`);
                 return res.status(401).json({ message: 'Gói tin đã hết hạn!' });
             }

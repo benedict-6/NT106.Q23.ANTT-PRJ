@@ -8,33 +8,48 @@ import { AppHeader } from '../../components/header.jsx';
 import { CircleAlert, ArrowDown01, ArrowUp01, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppStore } from '../../helper/icons.jsx';
 
-const MOCK_DATABASE_APPS = [
-  { id: 1, agent_id: "AGENT-001", name: "nginx-reverse-proxy.conf", version: "1.25.2", last_time_pull: "2026-05-23T15:30:00Z", cves: ["CVE-2026-22442", "CVE-2025-9981"] },
-  { id: 2, agent_id: "AGENT-001", name: "openssh-server-worker", version: "8.9.1", last_time_pull: "2026-05-22T09:15:00Z", cves: ["CVE-2026-1337"] },
-  { id: 3, agent_id: "AGENT-002", name: "redis-cache-cluster.service", version: "7.0.15", last_time_pull: "2026-05-20T11:45:00Z", cves: [] },
-  { id: 4, agent_id: "AGENT-002", name: "apache-tomcat-core-runner", version: "9.0.83", last_time_pull: "2026-04-12T08:20:00Z", cves: ["CVE-2026-5555"] },
-  { id: 5, agent_id: "AGENT-003", name: "python-flask-api-runtime", version: "3.0.2", last_time_pull: "2026-02-15T14:10:00Z", cves: [] },
-  { id: 6, agent_id: "AGENT-001", name: "node-express-auth-handler", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 7, agent_id: "AGENT-001", name: "node-express-auth-handler-v2", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 8, agent_id: "AGENT-001", name: "node-express-auth-handler-v3", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 9, agent_id: "AGENT-001", name: "node-express-auth-handler-v4", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 10, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 11, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 12, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 13, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 14, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 15, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 16, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 17, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-  { id: 18, agent_id: "AGENT-001", name: "node-express-auth-handler-v5", version: "4.18.2", last_time_pull: "2026-05-23T16:45:00Z", cves: ["CVE-2026-9999"] },
-];
+import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
 const ApplicationsPage = () => {
-  const uniqueAgentList = useMemo(() => {
-    return [...new Set(MOCK_DATABASE_APPS.map(app => app.agent_id))];
+  const { logs: socketLogs, isConnected } = useDashboardSocket();
+  const [agents, setAgents] = useState([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      const token = localStorage.getItem('token');
+      const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
+      try {
+        const res = await fetch(`${masterUrl}/api/dashboard/agents`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setAgents(data);
+          else if (data.agents && Array.isArray(data.agents)) setAgents(data.agents);
+          else if (data.data && Array.isArray(data.data)) setAgents(data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch agents", err);
+      }
+    };
+    fetchAgents();
   }, []);
 
-  const [agentId, setAgentId] = useState(uniqueAgentList[0] || "");
+  const [displayedApps, setDisplayedApps] = useState([]);
+
+  const uniqueAgentList = useMemo(() => {
+    const listFromLogs = [...new Set(displayedApps.map(app => app.agent_id))];
+    const listFromApi = agents.map(a => a.agent_id);
+    return [...new Set([...listFromApi, ...listFromLogs])].slice(0, 3);
+  }, [agents, displayedApps]);
+
+  const [agentId, setAgentId] = useState("");
+  useEffect(() => {
+    if (!agentId && uniqueAgentList.length > 0) {
+      setAgentId(uniqueAgentList[0]);
+    }
+  }, [uniqueAgentList, agentId]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("90"); 
   const [isLive, setIsLive] = useState(true);
@@ -54,14 +69,18 @@ const ApplicationsPage = () => {
 
   useEffect(() => {
     if (!isLive) return;
-    const interval = setInterval(() => {
-      console.log(`[LIVE] Fetching data from database for agent: ${agentId}...`);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isLive, agentId]);
+    setDisplayedApps(socketLogs.filter(log => log.type === 'software_list').map(log => ({
+        id: log.id,
+        agent_id: log.agent_id,
+        name: log.name || log.software_name || 'Unknown',
+        version: log.version || log._version || 'Unknown',
+        last_time_pull: log.timestamp,
+        cves: log.cves || []
+      })));
+  }, [isLive, socketLogs]);
 
   const filteredAndSortedData = useMemo(() => {
-    return MOCK_DATABASE_APPS.filter((app) => {
+    return displayedApps.filter((app) => {
       if (app.agent_id !== agentId) return false;
       if (searchQuery && !app.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
@@ -76,7 +95,7 @@ const ApplicationsPage = () => {
       if (sortOrder === "asc") return a.name.localeCompare(b.name);
       return b.name.localeCompare(a.name);
     });
-  }, [agentId, searchQuery, timeRange, sortOrder]);
+  }, [displayedApps, agentId, searchQuery, timeRange, sortOrder]);
 
   const customScrollbarClasses = `
     [&::-webkit-scrollbar]:w-2 
@@ -114,7 +133,7 @@ const ApplicationsPage = () => {
                   <AppStore/>
                 </div>
                 <div>
-                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">Apps</h3>
+                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">Apps {isConnected ? <span className="text-green-500 text-xs ml-2">● CONNECTED</span> : <span className="text-red-500 text-xs ml-2">● DISCONNECTED</span>}</h3>
                 </div>
               </div>
 

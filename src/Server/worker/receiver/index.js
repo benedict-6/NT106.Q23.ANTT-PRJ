@@ -5,6 +5,8 @@ import { evaluateData } from "../engine/ruleMatcher.js";
 import { decryptAgentPayload } from "../engine/decodedRawData.js";
 import { handleAgentFimReport, handleAgentNetProReport, handleAgentLogReport, handleAgentSoftwareReport } from "../engine/handleAgentRule.js";
 import { writeLogToDB } from "../actions/dbWriter.js";
+import pool from "../../shared/database/connect.js";
+import { GCMdecrypt } from "../../shared/utils/cryptoUtils.js";
 
 export default async function receiver(req, res) {
     try {
@@ -15,8 +17,22 @@ export default async function receiver(req, res) {
             return res.status(401).json({ message: 'Từ chối truy cập! Không xác định được Agent.' });
         }
 
-        // Giải mã dữ liệu AES từ agent
-        const decodedData = decryptAgentPayload(req.body.data);
+        // Lấy secret_key của Agent từ CSDL
+        const result = await pool.query("SELECT secret_key, secret_key_iv, secret_key_auth_tag FROM agents WHERE agent_id = $1", [agent_id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy Agent.' });
+        }
+        
+        const agent = result.rows[0];
+        const cipherObject = {
+            encryptedData: agent.secret_key,
+            iv: agent.secret_key_iv,
+            authTag: agent.secret_key_auth_tag
+        };
+        const rawKey = GCMdecrypt(cipherObject);
+
+        // Giải mã dữ liệu AES từ agent bằng chính key của agent
+        const decodedData = decryptAgentPayload(req.body.data, rawKey);
 
         if (!decodedData) {
             return res.status(400).json({ message: 'Lỗi giải mã dữ liệu AES.' });

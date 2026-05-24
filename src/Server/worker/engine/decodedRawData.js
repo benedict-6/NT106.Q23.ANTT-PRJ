@@ -1,6 +1,8 @@
 import zlib from 'zlib';
 import crypto from 'crypto';
 
+import { masterkey } from '../../shared/config/index.js';
+
 /**
  * Giải mã dữ liệu AES-256-GCM thô kèm theo Gzip gửi từ Agent
  * Cấu trúc buffer từ Go Agent: [Nonce (12 bytes)][Ciphertext (variable)][AuthTag (16 bytes)]
@@ -8,8 +10,10 @@ import crypto from 'crypto';
  * @param {string} [keyHex] Khóa AES dạng Hex (nếu không truyền sẽ dùng AES_MASTER_KEY từ env)
  * @returns {Object|null} Dữ liệu JSON đã giải mã và giải nén thành công
  */
-export const decryptAgentPayload = (buffer, keyHex) => {
+export const decryptAgentPayload = (inputBuffer, keyHex) => {
     try {
+        const buffer = typeof inputBuffer === 'string' ? Buffer.from(inputBuffer, 'base64') : (Buffer.isBuffer(inputBuffer) ? inputBuffer : Buffer.from(inputBuffer.data || inputBuffer));
+
         if (!buffer || buffer.length < 28) {
             console.error('[CryptoUtils] Dữ liệu buffer quá ngắn hoặc không hợp lệ.');
             return null;
@@ -19,7 +23,8 @@ export const decryptAgentPayload = (buffer, keyHex) => {
         const authTag = buffer.subarray(buffer.length - 16);
         const ciphertext = buffer.subarray(12, buffer.length - 16);
 
-        const key = keyHex ? Buffer.from(keyHex, 'hex') : getMasterKey();
+        // Khóa secret_key của Agent là chuỗi hex 32 ký tự, Go Agent dùng trực tiếp 32 byte ASCII này làm khóa AES-256
+        const key = keyHex ? Buffer.from(keyHex, 'utf8') : masterkey;
 
         // 1. Giải mã AES-256-GCM
         const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
