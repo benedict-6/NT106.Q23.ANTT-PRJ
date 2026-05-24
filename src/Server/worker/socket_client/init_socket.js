@@ -4,12 +4,29 @@ import WebSocket from "ws";
 import registerMasterHandler from './handlers/handlerMasterSocket.js'
 import { setMasterSocket } from "./services/serviceMasterSocket.js";
 
+let reconnectTimer = null;
+
 export default function InitSocket(url) {
-	const ws = new WebSocket(url); // tạo websocket
+	const connect = () => {
+		const ws = new WebSocket(url);
 
-	setMasterSocket(ws); // inject service
+		setMasterSocket(ws);
+		registerMasterHandler(ws);
 
-	registerMasterHandler(ws); // attach handler
+		ws.on('close', () => {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = setTimeout(() => {
+				console.log('[Worker] Đang thử kết nối lại với Master Node...');
+				connect();
+			}, 3000);
+		});
 
-	return ws;
+		ws.on('error', () => {
+			// Lỗi đường truyền, 'close' event sẽ được kích hoạt sau đó
+		});
+
+		return ws;
+	};
+
+	return connect();
 }

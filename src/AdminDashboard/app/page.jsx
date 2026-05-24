@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 import { SideBar } from '../components/sidebar.jsx';
 import { AppHeader } from '../components/header.jsx';
+import { useDashboardSocket } from '../hooks/useDashboardSocket.js';
 
 export const DashboardCard = ({ title, children, className = '' }) => (
   <div className={`bg-[#111111] border border-[#2A2A2A] rounded-xl p-5 flex flex-col shadow-lg ${className}`}>
@@ -44,6 +45,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   
+  const { alerts: socketAlerts, agentStatuses } = useDashboardSocket();
   const [rawAlerts, setRawAlerts] = useState([]);
   const [agents, setAgents] = useState([]);
   const [timeRange, setTimeRange] = useState('1d'); 
@@ -94,7 +96,10 @@ export default function Dashboard() {
         '90d': 90 * 24 * 60 * 60 * 1000,
     };
     const cutoff = now - ranges[timeRange];
-    const validAlerts = rawAlerts.filter(a => new Date(a.created_at || a.timestamp).getTime() >= cutoff);
+    
+    // Merge rawAlerts from API with socketAlerts
+    const mergedAlerts = [...socketAlerts, ...rawAlerts].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+    const validAlerts = mergedAlerts.filter(a => new Date(a.created_at || a.timestamp).getTime() >= cutoff);
 
     const timelineMap = {};
     validAlerts.forEach(a => {
@@ -139,11 +144,19 @@ export default function Dashboard() {
         .filter(item => item.level >= 7) 
         .sort((a, b) => b.level - a.level || b.count - a.count);
 
-    const active = agents.filter(a => a.agent_status === 'online').length;
-    const offline = agents.filter(a => a.agent_status === 'offline').length;
+    // Merge agents with socket agentStatuses
+    const mergedAgents = agents.map(a => {
+        if (agentStatuses[a.agent_id]) {
+            return { ...a, agent_status: agentStatuses[a.agent_id].status };
+        }
+        return a;
+    });
+
+    const active = mergedAgents.filter(a => a.agent_status === 'online').length;
+    const offline = mergedAgents.filter(a => a.agent_status === 'offline').length;
 
     return { filteredAlerts: validAlerts, timelineData, alertTypeData, tableData, agentStats: { active, offline } };
-  }, [rawAlerts, agents, timeRange]); 
+  }, [rawAlerts, socketAlerts, agents, agentStatuses, timeRange]);  
 
   if (!mounted) return null;
   const barColors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
@@ -152,7 +165,7 @@ export default function Dashboard() {
     <div className="flex bg-[#050505] min-h-screen text-white font-sans selection:bg-blue-500/30">
       <SideBar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <AppHeader route={"dashboard"} />
+        <AppHeader route={"dashboard"} hasAlerts={socketAlerts.length > 0} />
         
         <main className="flex-1 overflow-y-auto p-6 scrollbar-hide">
           <div className="max-w-7xl mx-auto space-y-6">

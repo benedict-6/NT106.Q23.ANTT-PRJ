@@ -87,6 +87,19 @@ export const writeLogToDB = async (parsedData) => {
             console.log(`[DBWriter] Đã ghi Log Monitoring vào log_monitoring cho Agent [${agent_id}]`);
             return { id: result.rows[0]?.log_monitoring_id, createdAt };
 
+        } else if (type === 'software_list') {
+            const swName = payload.name || payload.software_name || 'Unknown';
+            const version = payload.version || payload._version || 'Unknown';
+            const installDate = payload.install_date || null;
+            const vendor = payload.vendor || payload.publisher || null;
+
+            const result = await pool.query(
+                `INSERT INTO applications (agent_id, software_name, _version)
+                 VALUES ($1, $2, $3) RETURNING app_id`,
+                [agent_id, swName, version]
+            );
+            console.log(`[DBWriter] Đã ghi Software vào applications cho Agent [${agent_id}]`);
+            return { id: result.rows[0]?.app_id, createdAt };
         }
     } catch (err) {
         console.error(`[DBWriter] Lỗi khi ghi dữ liệu vào CSDL cho Agent [${agent_id}]:`, err.message);

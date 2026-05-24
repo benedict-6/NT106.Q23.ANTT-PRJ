@@ -8,49 +8,65 @@ import { AppHeader } from '../../components/header.jsx';
 import { CircleAlert, ArrowDown01, ArrowUp01, ChevronLeft, ChevronRight, Network, ShieldAlert, Activity } from 'lucide-react';
 import { AlwaysData, Hackaday, WireShark } from '../../helper/icons.jsx';
 
-// Change MOCK_NETPRO_DATABASE for real data
-const MOCK_NETPRO_DATABASE = [
-  { id: 1, agent_id: "AGENT-001", comm: "nginx", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "10.0.0.12", pid: 2045, uid: 33, protocol: "TCP", sport: 48292, dport: 443, timestamp: "2026-05-23T15:30:00Z" },
-  { id: 2, agent_id: "AGENT-001", comm: "ssh-worker", event_type: "accept", saddr: "203.0.113.5", daddr: "192.168.1.50", pid: 8841, uid: 0, protocol: "TCP", sport: 51220, dport: 22, timestamp: "2026-05-22T09:15:00Z" },
-  { id: 3, agent_id: "AGENT-002", comm: "redis-server", event_type: "socket_bind", saddr: "127.0.0.1", daddr: "127.0.0.1", pid: 1024, uid: 999, protocol: "TCP", sport: 6379, dport: 0, timestamp: "2026-05-20T11:45:00Z" },
-  { id: 4, agent_id: "AGENT-002", comm: "curl", event_type: "dns_lookup", saddr: "192.168.2.11", daddr: "8.8.8.8", pid: 15420, uid: 1000, protocol: "UDP", sport: 39144, dport: 53, timestamp: "2026-04-12T08:20:00Z" },
-  { id: 5, agent_id: "AGENT-003", comm: "python3", event_type: "reverse_shell", saddr: "192.168.3.4", daddr: "45.33.22.11", pid: 31122, uid: 0, protocol: "TCP", sport: 44444, dport: 4444, timestamp: "2026-05-23T16:20:00Z" },
-  { id: 6, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 7, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 8, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 9, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 10, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 11, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 12, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 13, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 14, agent_id: "AGENT-001", comm: "node-auth", event_type: "socket_connect", saddr: "192.168.1.50", daddr: "172.217.16.142", pid: 4521, uid: 1001, protocol: "TCP", sport: 59321, dport: 80, timestamp: "2026-05-23T16:45:00Z" },
-];
-
-const MOCK_NETPRO_ALERTS = [
-  { id: 1, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 2, agent_id: "AGENT-003", rule_name: "Potential Reverse Shell Detected", severity: "CRITICAL", timestamp: "2026-05-23T16:20:00Z" },
-  { id: 3, agent_id: "AGENT-002", rule_name: "Outbound DNS Tunneling Suspect", severity: "MEDIUM", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 4, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 5, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 6, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 7, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 8, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 9, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 10, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 11, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 12, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-];
+import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
 const NetproPage = () => {
-  const uniqueAgentList = useMemo(() => {
-    return [...new Set(MOCK_NETPRO_DATABASE.map(log => log.agent_id))];
+  const { logs: socketLogs, alerts: socketAlerts, isConnected } = useDashboardSocket();
+  const [agents, setAgents] = useState([]);
+  
+  // Lấy danh sách Agents từ API
+  useEffect(() => {
+    const fetchAgents = async () => {
+      const token = localStorage.getItem('token');
+      const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
+      try {
+        const res = await fetch(`${masterUrl}/api/dashboard/agents`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Assume data is { success: true, data: [...] } or just [...]
+          if (Array.isArray(data)) setAgents(data);
+          else if (data.agents && Array.isArray(data.agents)) setAgents(data.agents);
+          else if (data.data && Array.isArray(data.data)) setAgents(data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch agents", err);
+      }
+    };
+    fetchAgents();
   }, []);
 
-  const [agentId, setAgentId] = useState(uniqueAgentList[0] || "");
+  const uniqueAgentList = useMemo(() => {
+    const apiAgentIds = agents.map(a => a.agent_id);
+    const logAgentIds = [...new Set(socketLogs.map(log => log.agent_id))];
+    return [...new Set([...apiAgentIds, ...logAgentIds])];
+  }, [agents, socketLogs]);
+
+  const [agentId, setAgentId] = useState("");
+
+  // Tự động set agentId đầu tiên nếu chưa có
+  useEffect(() => {
+    if (!agentId && uniqueAgentList.length > 0) {
+      setAgentId(uniqueAgentList[0]);
+    }
+  }, [uniqueAgentList, agentId]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("90");
   const [isLive, setIsLive] = useState(true);
   const [sortOrder, setSortOrder] = useState("desc");
+
+  // State giữ lại logs hiển thị nếu tắt Live
+  const [displayedLogs, setDisplayedLogs] = useState([]);
+  const [displayedAlerts, setDisplayedAlerts] = useState([]);
+
+  useEffect(() => {
+    if (isLive) {
+      setDisplayedLogs(socketLogs);
+      setDisplayedAlerts(socketAlerts);
+    }
+  }, [socketLogs, socketAlerts, isLive]);
 
   const handleCycleAgent = (direction) => {
     const currentIndex = uniqueAgentList.indexOf(agentId);
@@ -66,17 +82,17 @@ const NetproPage = () => {
 
   useEffect(() => {
     if (!isLive) return;
-    const interval = setInterval(() => {
-      console.log(`[LIVE] Fetching netpro kernel streams for agent: ${agentId}...`);
-    }, 5000);
-    return () => clearInterval(interval);
+    // Optional: could ping or fetch historical here if needed
   }, [isLive, agentId]);
 
   const filteredAndSortedLogs = useMemo(() => {
-    return MOCK_NETPRO_DATABASE.filter((log) => {
+    return displayedLogs.filter((log) => {
       if (log.agent_id !== agentId) return false;
+      
+      const commStr = log.comm || "";
+      const eventTypeStr = log.event_type || "";
 
-      if (searchQuery && !log.comm.toLowerCase().includes(searchQuery.toLowerCase()) && !log.event_type.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !commStr.toLowerCase().includes(searchQuery.toLowerCase()) && !eventTypeStr.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
       const pullDate = new Date(log.timestamp);
       const currentDate = new Date();
@@ -87,13 +103,15 @@ const NetproPage = () => {
 
       return true;
     }).sort((a, b) => {
-      if (sortOrder === "asc") return a.comm.localeCompare(b.comm);
-      return b.comm.localeCompare(a.comm);
+      const commA = a.comm || "";
+      const commB = b.comm || "";
+      if (sortOrder === "asc") return commA.localeCompare(commB);
+      return commB.localeCompare(commA);
     });
-  }, [agentId, searchQuery, timeRange, sortOrder]);
+  }, [displayedLogs, agentId, searchQuery, timeRange, sortOrder]);
 
   const filteredAlerts = useMemo(() => {
-    return MOCK_NETPRO_ALERTS.filter((alert) => {
+    return displayedAlerts.filter((alert) => {
       if (alert.agent_id !== agentId) return false;
 
       const alertDate = new Date(alert.timestamp);
@@ -104,15 +122,15 @@ const NetproPage = () => {
       if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [agentId, timeRange]);
+  }, [displayedAlerts, agentId, timeRange]);
 
   const alertMetrics = useMemo(() => {
     const now = new Date();
     let stats = { min1: 0, min30: 0, min60: 0, day1: 0, day30: 0 };
 
-    MOCK_NETPRO_ALERTS.forEach((alert) => {
+    displayedAlerts.forEach((alert) => {
       if (alert.agent_id !== agentId) return;
-
+      
       const alertTime = new Date(alert.timestamp);
       const diffMs = Math.abs(now - alertTime);
       const diffMins = diffMs / (1000 * 60);
@@ -126,7 +144,7 @@ const NetproPage = () => {
     });
 
     return stats;
-  }, [agentId]);
+  }, [displayedAlerts, agentId]);
 
   return (
     <div className="w-full flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans">
@@ -152,7 +170,7 @@ const NetproPage = () => {
                   <AlwaysData />
                 </div>
                 <div>
-                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">NETWORK & PROCCESS</h3>
+                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">NETWORK & PROCCESS {isConnected ? <span className="text-green-500 text-xs ml-2">● CONNECTED</span> : <span className="text-red-500 text-xs ml-2">● DISCONNECTED</span>}</h3>
                 </div>
               </div>
 
@@ -166,7 +184,7 @@ const NetproPage = () => {
                 </button>
 
                 <div className="flex flex-wrap gap-2 bg-[#050505] p-1 border-none">
-                  {uniqueAgentList.map((id) => (
+                  {uniqueAgentList.slice(0, 3).map((id) => (
                     <button
                       key={id}
                       onClick={() => setAgentId(id)}

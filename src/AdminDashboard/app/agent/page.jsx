@@ -72,7 +72,7 @@ export default function CreateAgentPage() {
     const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
 
     try {
-      const downloadResponse = await fetch(`${masterUrl}/api/agents/${successData.agent_id}/download-installer`, {
+      const downloadResponse = await fetch(`${masterUrl}/api/dashboard/agents/download/${successData.agent_data.agent_id}`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -86,8 +86,7 @@ export default function CreateAgentPage() {
       const link = document.createElement('a');
       link.href = fileUrl;
       
-      const ext = formData.osType === 'windows' ? 'ps1' : 'sh';
-      link.setAttribute('download', `deploy-agent-${formData.agentName.toLowerCase()}.${ext}`);
+      link.setAttribute('download', `siem-agent-${successData.agent_data.agent_id}.zip`);
       
       document.body.appendChild(link);
       link.click();
@@ -258,15 +257,15 @@ export default function CreateAgentPage() {
                     ) : (
                       <div className="space-y-4 animate-fadeIn font-mono">
                         <div className="flex items-center gap-2 text-green-400 text-xs font-bold uppercase tracking-wider">
-                          <CheckCircle2 size={15} /> Đã kích hoạt ID: {successData.agent_id}
+                          <CheckCircle2 size={15} /> Đã kích hoạt ID: {successData.agent_data.agent_id}
                         </div>
                         
                         <div className="bg-[#050505] p-3 border border-[#232323] text-[11px] text-green-500 space-y-2 overflow-x-auto leading-relaxed">
                           <p className="text-gray-600"># Chạy lệnh sau tại máy chủ mục tiêu với quyền Root/Admin:</p>
                           {formData.osType === 'linux' ? (
                             <>
-                              <p className="text-gray-300">chmod +x deploy-agent-{formData.agentName.toLowerCase()}.sh</p>
-                              <p className="text-blue-400">sudo ./deploy-agent-{formData.agentName.toLowerCase()}.sh --token={successData.activation_token || "AUTH_TOKEN_HASH"}</p>
+                              <p className="text-gray-300">unzip siem-agent-{successData.agent_data.agent_id}.zip</p>
+                              <p className="text-blue-400">sudo dpkg -i siem-agent_1.0.0_amd64.deb</p>
                             </>
                           ) : (
                             <>
@@ -277,7 +276,7 @@ export default function CreateAgentPage() {
                         </div>
                         
                         <p className="text-[10px] text-gray-500 leading-normal">
-                          * Tệp cấu hình script đã được đẩy xuống qua luồng download của trình duyệt. Vui lòng kiểm tra thư mục Tải về.
+                          * Tệp cấu hình agent_config.json đã được đóng gói kèm trong file ZIP. Agent sẽ tự động nạp cấu hình khi khởi động.
                         </p>
                       </div>
                     )}
