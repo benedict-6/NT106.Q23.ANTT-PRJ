@@ -52,8 +52,6 @@ CHI TIẾT SỰ KIỆN:
 ${JSON.stringify(alert.payload || alert, null, 4)}
 
 ------------------------------------------------------------
-Vui lòng truy cập ngay vào Admin Dashboard của hệ thống SIEM để
-tiến hành điều tra và xử lý sự cố kịp thời.
 ============================================================
 `;
 
@@ -61,14 +59,14 @@ tiến hành điều tra và xử lý sự cố kịp thời.
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            user: process.env.EMAIL_USER || 'siem.antt.nt106@gmail.com',
-            pass: process.env.EMAIL_PASS || 'your-gmail-app-password'
+            user: process.env.MAIL_USER,
+            pass: process.env.MAIL_PASS
         }
     });
 
     const mailOptions = {
-        from: process.env.EMAIL_USER || 'siem.antt.nt106@gmail.com',
-        to: process.env.EMAIL_RECEIVER || 'admin.security@company.com',
+        from: process.env.MAIL_USER ,
+        to: process.env.MAIL_DES,
         subject: `⚠️ [SIEM ALERT - LEVEL ${alert.packet_level}] ${alert.rule_name}`,
         text: emailContent
     };
@@ -89,7 +87,6 @@ Tiêu đề: ${mailOptions.subject}
 Nội dung:
 ${mailOptions.text}
 ======================================================================
-(Lưu ý: Bạn có thể cấu hình EMAIL_USER và EMAIL_PASS trong file .env để gửi email thật)
             `);
         }
     } catch (err) {

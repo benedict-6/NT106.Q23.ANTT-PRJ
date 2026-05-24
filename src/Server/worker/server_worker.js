@@ -13,6 +13,7 @@ const app = express();
 const httpServer = createServer(app);
 app.use(cors());
 app.use(express.json());
+app.use(express.raw({ type: 'application/octet-stream' }));
 
 import { sendToMaster } from "./socket_client/services/serviceMasterSocket.js";
 

@@ -17,28 +17,15 @@ export default async function receiver(req, res) {
             return res.status(401).json({ message: 'Từ chối truy cập! Không xác định được Agent.' });
         }
 
-        // Lấy secret_key của Agent từ CSDL
-        const result = await pool.query("SELECT secret_key, secret_key_iv, secret_key_auth_tag FROM agents WHERE agent_id = $1", [agent_id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy Agent.' });
-        }
-        
-        const agent = result.rows[0];
-        const cipherObject = {
-            encryptedData: agent.secret_key,
-            iv: agent.secret_key_iv,
-            authTag: agent.secret_key_auth_tag
-        };
-        const rawKey = GCMdecrypt(cipherObject);
-
-        // Giải mã dữ liệu AES từ agent bằng chính key của agent
-        const decodedData = decryptAgentPayload(req.body.data, rawKey);
+        // Giải nén dữ liệu Gzip từ agent
+        const buffer = Buffer.isBuffer(req.body) ? req.body : req.body.data;
+        const decodedData = decryptAgentPayload(buffer);
 
         if (!decodedData) {
-            return res.status(400).json({ message: 'Lỗi giải mã dữ liệu AES.' });
+            return res.status(400).json({ message: 'Lỗi giải nén dữ liệu.' });
         }
         else {
-            res.status(200).json({ message: 'Giải mã dữ liệu AES thành công.' });
+            res.status(200).json({ message: 'Giải nén dữ liệu thành công.' });
         }
 
 

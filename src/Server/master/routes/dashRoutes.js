@@ -11,7 +11,7 @@ router.post('/agents/create', verifyJWT, dashController.createAgent);
 // GET /api/dashboard/agents — Lấy danh sách agents
 router.get('/agents', verifyJWT, dashController.listAgents);
 
-// GET /api/dashboard/agents/download/:agent_id — Tải config agent
+// GET /api/dashboard/agents/download/:agent_id — Tải agent
 router.get('/agents/download/:agent_id', verifyJWT, dashController.downloadAgentConfig);
 
 export default router;
