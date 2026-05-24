@@ -8,44 +8,50 @@ import { AppHeader } from '../../components/header.jsx';
 import { CircleAlert, ArrowDown01, ArrowUp01, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Hackaday, Files, Graph } from '../../helper/icons.jsx';
 
-const MOCK_LOG_DATABASE = [
-  { id: 1, agent_id: "AGENT-001", file_path: "/etc/nginx/nginx.conf", service: "nginx", pid: 2045, action: "modify", src_ip: "192.168.1.50", user: "www-data", port: 443, timestamp: "2026-05-23T15:30:00Z" },
-  { id: 2, agent_id: "AGENT-001", file_path: "/usr/sbin/sshd", service: "sshd", pid: 8841, action: "read", src_ip: "203.0.113.5", user: "root", port: 22, timestamp: "2026-05-22T09:15:00Z" },
-  { id: 3, agent_id: "AGENT-002", file_path: "/var/lib/redis/dump.rdb", service: "redis", pid: 1024, action: "write", src_ip: "127.0.0.1", user: "redis", port: 6379, timestamp: "2026-05-20T11:45:00Z" },
-  { id: 4, agent_id: "AGENT-002", file_path: "/usr/bin/curl", service: "curl", pid: 15420, action: "execute", src_ip: "192.168.2.11", user: "user1", port: 80, timestamp: "2026-04-12T08:20:00Z" },
-  { id: 5, agent_id: "AGENT-003", file_path: "/bin/bash", service: "python3", pid: 31122, action: "execute", src_ip: "192.168.3.4", user: "root", port: 4444, timestamp: "2026-05-23T16:20:00Z" },
-  { id: 6, agent_id: "AGENT-001", file_path: "/etc/shadow", service: "node-auth", pid: 4521, action: "modify", src_ip: "192.168.1.50", user: "node", port: 8080, timestamp: "2026-05-23T16:45:00Z" },
-  { id: 7, agent_id: "AGENT-001", file_path: "/etc/system32", service: "wanna_cry", pid: 4444, action: "delete", src_ip: "192.168.1.44", user: "root", port: 8386, timestamp: "2026-06-23T16:45:00Z" },
-  { id: 8, agent_id: "AGENT-001", file_path: "/etc/tmp", service: "xHelper", pid: 7777, action: "execute", src_ip: "192.168.1.100", user: "node", port: 7777, timestamp: "2026-02-23T16:45:00Z" },
-  { id: 9, agent_id: "AGENT-001", file_path: "/etc/admin", service: "root_kit", pid: 4343, action: "write", src_ip: "192.168.1.144", user: "root", port: 8486, timestamp: "2026-04-24T16:45:00Z" },
-  { id: 10, agent_id: "AGENT-001", file_path: "/etc/nginx/nginx.conf", service: "nginx", pid: 2045, action: "modify", src_ip: "192.168.1.50", user: "www-data", port: 443, timestamp: "2026-05-23T15:30:00Z" },
-  { id: 11, agent_id: "AGENT-001", file_path: "/etc/nginx/nginx.conf", service: "nginx", pid: 2045, action: "modify", src_ip: "192.168.1.50", user: "www-data", port: 443, timestamp: "2026-05-23T15:30:00Z" },
-  { id: 12, agent_id: "AGENT-001", file_path: "/etc/nginx/nginx.conf", service: "nginx", pid: 2045, action: "modify", src_ip: "192.168.1.50", user: "www-data", port: 443, timestamp: "2026-05-23T15:30:00Z" },
-  { id: 13, agent_id: "AGENT-001", file_path: "/etc/nginx/nginx.conf", service: "nginx", pid: 2045, action: "modify", src_ip: "192.168.1.50", user: "www-data", port: 443, timestamp: "2026-05-23T15:30:00Z" },
-  { id: 14, agent_id: "AGENT-001", file_path: "/etc/nginx/nginx.conf", service: "nginx", pid: 2045, action: "modify", src_ip: "192.168.1.50", user: "www-data", port: 443, timestamp: "2026-05-23T15:30:00Z" },
-];
+import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
-const MOCK_LOG_ALERTS = [
-  { id: 1, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 2, agent_id: "AGENT-003", rule_name: "Potential Reverse Shell Detected", severity: "CRITICAL", timestamp: "2026-05-23T16:20:00Z" },
-  { id: 3, agent_id: "AGENT-002", rule_name: "Outbound DNS Tunneling Suspect", severity: "MEDIUM", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 4, agent_id: "AGENT-002", rule_name: "DDOS detected", severity: "HIGH", timestamp: "2026-04-12T08:20:00Z" },
-  { id: 5, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 6, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 7, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 8, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 9, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-  { id: 10, agent_id: "AGENT-001", rule_name: "Unusual Inbound SSH Connection", severity: "HIGH", timestamp: "2026-05-23T16:45:00Z" },
-];
-
-const CURRENT_ANCHOR_TIME = new Date();
-
+// removed CURRENT_ANCHOR_TIME
 const NetproPage = () => {
-  const uniqueAgentList = useMemo(() => {
-    return [...new Set(MOCK_LOG_DATABASE.map(log => log.agent_id))];
+  const { logs: socketLogs, alerts: socketAlerts, isConnected } = useDashboardSocket();
+  const [agents, setAgents] = useState([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      const token = localStorage.getItem('token');
+      const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
+      try {
+        const res = await fetch(`${masterUrl}/api/dashboard/agents`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setAgents(data);
+          else if (data.agents && Array.isArray(data.agents)) setAgents(data.agents);
+          else if (data.data && Array.isArray(data.data)) setAgents(data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch agents", err);
+      }
+    };
+    fetchAgents();
   }, []);
 
-  const [agentId, setAgentId] = useState(uniqueAgentList[0] || "");
+  const [displayedLogs, setDisplayedLogs] = useState([]);
+  const [displayedAlerts, setDisplayedAlerts] = useState([]);
+
+  const uniqueAgentList = useMemo(() => {
+    const listFromLogs = [...new Set(displayedLogs.map(log => log.agent_id))];
+    const listFromApi = agents.map(a => a.agent_id);
+    return [...new Set([...listFromApi, ...listFromLogs])].slice(0, 3);
+  }, [agents, displayedLogs]);
+
+  const [agentId, setAgentId] = useState("");
+
+  useEffect(() => {
+    if (!agentId && uniqueAgentList.length > 0) {
+      setAgentId(uniqueAgentList[0]);
+    }
+  }, [uniqueAgentList, agentId]);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("90"); 
   const [isLive, setIsLive] = useState(true);
@@ -65,14 +71,12 @@ const NetproPage = () => {
 
   useEffect(() => {
     if (!isLive) return;
-    const interval = setInterval(() => {
-      console.log(`[LIVE] Fetching data: ${agentId}...`);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isLive, agentId]);
+    setDisplayedLogs(socketLogs.filter(log => log.type === 'log_monitoring'));
+    setDisplayedAlerts(socketAlerts);
+  }, [isLive, socketLogs, socketAlerts]);
 
   const filteredAndSortedLogs = useMemo(() => {
-    return MOCK_LOG_DATABASE.filter((log) => {
+    return displayedLogs.filter((log) => {
       if (log.agent_id !== agentId) return false;
       
       if (searchQuery && 
@@ -82,7 +86,8 @@ const NetproPage = () => {
       ) return false;
 
       const pullDate = new Date(log.timestamp);
-      const diffTime = Math.abs(CURRENT_ANCHOR_TIME - pullDate);
+      const currentDate = new Date();
+      const diffTime = Math.abs(currentDate - pullDate);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
       if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
@@ -90,22 +95,23 @@ const NetproPage = () => {
       return true;
     }).sort((a, b) => {
       if (sortOrder === "asc") return a.service.localeCompare(b.service);
-      return b.service.localeCompare(b.service);
+      return b.service.localeCompare(a.service);
     });
-  }, [agentId, searchQuery, timeRange, sortOrder]);
+  }, [displayedLogs, agentId, searchQuery, timeRange, sortOrder]);
 
   const filteredAlerts = useMemo(() => {
-    return MOCK_LOG_ALERTS.filter((alert) => {
+    return displayedAlerts.filter((alert) => {
       if (alert.agent_id !== agentId) return false;
 
       const alertDate = new Date(alert.timestamp);
-      const diffTime = Math.abs(CURRENT_ANCHOR_TIME - alertDate);
+      const currentDate = new Date();
+      const diffTime = Math.abs(currentDate - alertDate);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [agentId, timeRange]);
+  }, [displayedAlerts, agentId, timeRange]);
 
   const logProportions = useMemo(() => {
     const counts = {};
@@ -181,7 +187,7 @@ const NetproPage = () => {
                   <Files />
                 </div>
                 <div>
-                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">Logs</h3>
+                  <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">Logs {isConnected ? <span className="text-green-500 text-xs ml-2">● CONNECTED</span> : <span className="text-red-500 text-xs ml-2">● DISCONNECTED</span>}</h3>
                 </div>
               </div>
 

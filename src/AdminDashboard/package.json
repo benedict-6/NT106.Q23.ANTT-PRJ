@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "next dev -p 3002 --turbo",
     "detect": "nodemon server.js",
     "build": "next build",
     "lint": "eslint .",

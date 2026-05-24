@@ -5,6 +5,8 @@ import { evaluateData } from "../engine/ruleMatcher.js";
 import { decryptAgentPayload } from "../engine/decodedRawData.js";
 import { handleAgentFimReport, handleAgentNetProReport, handleAgentLogReport, handleAgentSoftwareReport } from "../engine/handleAgentRule.js";
 import { writeLogToDB } from "../actions/dbWriter.js";
+import pool from "../../shared/database/connect.js";
+import { GCMdecrypt } from "../../shared/utils/cryptoUtils.js";
 
 export default async function receiver(req, res) {
     try {
