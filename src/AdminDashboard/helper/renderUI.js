@@ -167,3 +167,22 @@ export const LogLine = ({ time, type, msg, glow = true }) => {
     </div>
   );
 }
+
+export const Windows = ({ size = 16, className = '', ...props }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      {...props}
+    >
+      <rect x="3" y="3" width="8" height="8" />
+      <rect x="13" y="3" width="8" height="8" />
+      <rect x="3" y="13" width="8" height="8" />
+      <rect x="13" y="13" width="8" height="8" />
+    </svg>
+  );
+};
