@@ -15,14 +15,15 @@ export default async function receiver(req, res) {
             return res.status(401).json({ message: 'Từ chối truy cập! Không xác định được Agent.' });
         }
 
-        // Giải mã dữ liệu AES từ agent
-        const decodedData = decryptAgentPayload(req.body.data);
+        // Giải nén dữ liệu Gzip từ agent
+        const buffer = Buffer.isBuffer(req.body) ? req.body : req.body.data;
+        const decodedData = decryptAgentPayload(buffer);
 
         if (!decodedData) {
-            return res.status(400).json({ message: 'Lỗi giải mã dữ liệu AES.' });
+            return res.status(400).json({ message: 'Lỗi giải nén dữ liệu.' });
         }
         else {
-            res.status(200).json({ message: 'Giải mã dữ liệu AES thành công.' });
+            res.status(200).json({ message: 'Giải nén dữ liệu thành công.' });
         }
 
 

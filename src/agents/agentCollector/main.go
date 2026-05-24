@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -175,7 +173,10 @@ func performHandshake() error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Timeout: 10 * time.Second, Transport: tr}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("không thể kết nối Master Server: %w", err)
@@ -254,20 +255,14 @@ func sendBatch(batch [][]byte) {
 	}
 	gw.Close()
 
-	// 3. Encrypt via AES-GCM
-	encrypted, err := encrypt(compressed.Bytes(), []byte(currentConfig.SecretKey))
-	if err != nil {
-		return
-	}
-
 	// 4. Send to server
-	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(encrypted))
+	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(compressed.Bytes()))
 	if err != nil {
 		return
 	}
 
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Content-Encoding", "aes-gcm")
+	req.Header.Set("Content-Encoding", "gzip")
 
 	// Thêm Session Token vào Header để xác thực
 	token := currentConfig.SessionToken
@@ -275,7 +270,10 @@ func sendBatch(batch [][]byte) {
 		req.Header.Set("authorization", "Bearer "+token)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Timeout: 10 * time.Second, Transport: tr}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to send data to server: %v", err)
@@ -291,24 +289,4 @@ func sendBatch(batch [][]byte) {
 	} else {
 		log.Printf("Server returned non-200 status: %s", resp.Status)
 	}
-}
-
-func encrypt(plaintext, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	nonce := make([]byte, aesgcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
-	}
-
-	ciphertext := aesgcm.Seal(nonce, nonce, plaintext, nil)
-	return ciphertext, nil
 }

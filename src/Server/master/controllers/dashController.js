@@ -4,11 +4,13 @@
 import crypto from 'crypto'
 import pool from '../../shared/database/connect.js'
 import { GCMencrypt, GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
-import archiver from 'archiver';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const archiver = require('archiver');
 
 const dashController = {
 	// Tạo agent mới, gắn user_id từ JWT
@@ -37,7 +39,7 @@ const dashController = {
 
 			//Tra res
 			res.status(201).json({
-				message: 'Tạo agent thành công! Bảo quản tốt Secret Key nhé!',
+				message: 'Tạo agent thành công!',
 				agent_data: {
 					agent_id: agentID,
 					secret_key: rawSecretkey,
@@ -113,9 +115,9 @@ const dashController = {
 			res.setHeader('Content-Type', 'application/zip');
 			res.setHeader('Content-Disposition', `attachment; filename="siem-agent-${agent_id}.zip"`);
 
-			archive.on('error', function(err) {
+			archive.on('error', function (err) {
 				console.error('Lỗi khi nén file ZIP: ', err);
-				res.status(500).send({error: err.message});
+				res.status(500).send({ error: err.message });
 			});
 
 			// Gắn luồng nén vào response
@@ -127,8 +129,8 @@ const dashController = {
 			// 3. Đọc file .deb tĩnh và nhét vào file ZIP
 			const __filename = fileURLToPath(import.meta.url);
 			const __dirname = path.dirname(__filename);
-			const debFilePath = path.join(__dirname, '../download/siem-agent_1.0.0_amd64.deb'); 
-			
+			const debFilePath = path.join(__dirname, '../download/siem-agent_1.0.0_amd64.deb');
+
 			if (fs.existsSync(debFilePath)) {
 				archive.file(debFilePath, { name: 'siem-agent_1.0.0_amd64.deb' });
 			} else {
