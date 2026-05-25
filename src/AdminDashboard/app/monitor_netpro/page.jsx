@@ -40,17 +40,10 @@ const NetproPage = () => {
   const uniqueAgentList = useMemo(() => {
     const apiAgentIds = agents.map(a => a.agent_id);
     const logAgentIds = [...new Set(socketLogs.map(log => log.agent_id))];
-    return [...new Set([...apiAgentIds, ...logAgentIds])];
+    return ['all', ...new Set([...apiAgentIds, ...logAgentIds])];
   }, [agents, socketLogs]);
 
-  const [agentId, setAgentId] = useState("");
-
-  // Tự động set agentId đầu tiên nếu chưa có
-  useEffect(() => {
-    if (!agentId && uniqueAgentList.length > 0) {
-      setAgentId(uniqueAgentList[0]);
-    }
-  }, [uniqueAgentList, agentId]);
+  const [agentId, setAgentId] = useState("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("24h");
@@ -63,7 +56,7 @@ const NetproPage = () => {
 
   // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
-    if (agentId && isConnected) {
+    if (isConnected) {
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_NETPRO_LOGS', agentId, isLive ? undefined : timeRange);
     }
@@ -103,13 +96,14 @@ const NetproPage = () => {
   };
 
   const getAgentName = (id) => {
+    if (id === 'all') return 'ALL';
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
-      if (log.agent_id !== agentId) return false;
+      if (agentId !== 'all' && log.agent_id !== agentId) return false;
 
       const commStr = log.comm || "";
       const eventTypeStr = log.event_type || "";
@@ -118,16 +112,16 @@ const NetproPage = () => {
 
       return true;
     }).sort((a, b) => {
-      const commA = a.comm || "";
-      const commB = b.comm || "";
-      if (sortOrder === "asc") return commA.localeCompare(commB);
-      return commB.localeCompare(commA);
+      const timeA = new Date(a.timestamp || 0).getTime();
+      const timeB = new Date(b.timestamp || 0).getTime();
+      if (sortOrder === "asc") return timeA - timeB;
+      return timeB - timeA;
     });
   }, [displayedLogs, agentId, searchQuery, sortOrder]);
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
-      if (alert.agent_id !== agentId) return false;
+      if (agentId !== 'all' && alert.agent_id !== agentId) return false;
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [displayedAlerts, agentId]);
@@ -137,7 +131,7 @@ const NetproPage = () => {
     let stats = { min1: 0, min30: 0, min60: 0, day1: 0, day30: 0 };
 
     displayedAlerts.forEach((alert) => {
-      if (alert.agent_id !== agentId) return;
+      if (agentId !== 'all' && alert.agent_id !== agentId) return;
 
       const alertTime = new Date(alert.timestamp);
       const diffMs = Math.abs(now - alertTime);
@@ -192,7 +186,7 @@ const NetproPage = () => {
                 </button>
 
                 <div className="flex flex-wrap gap-2 bg-[#050505] p-1 border-none">
-                  {uniqueAgentList.slice(0, 3).map((id) => (
+                  {uniqueAgentList.map((id) => (
                     <button
                       key={id}
                       onClick={() => setAgentId(id)}
@@ -274,46 +268,46 @@ const NetproPage = () => {
                     [&::-webkit-scrollbar-track]:bg-[#080808] 
                     [&::-webkit-scrollbar-thumb]:bg-[#222] 
                     hover:[&::-webkit-scrollbar-thumb]:bg-blue-600/50">
-                    <table className="w-full text-left border-collapse font-mono text-md whitespace-nowrap">
+                    <table className="w-full table-fixed text-left border-collapse font-mono text-md whitespace-nowrap">
                       <thead className="sticky top-0 z-20 bg-[#141414]">
                         <tr className="border-b border-[#232323] text-blue-600 font-bold uppercase tracking-wider">
-                          <th className="py-3 px-4 cursor-pointer hover:bg-[#1c1c1c] transition-colors" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
+                          <th className="py-3 px-4 w-[16%]">CMD</th>
+                          <th className="py-3 px-4 w-[12%]">Event Type</th>
+                          <th className="py-3 px-4 w-[12%]">Src IP</th>
+                          <th className="py-3 px-4 w-[12%]">Des IP</th>
+                          <th className="py-3 px-4 w-[8%]">PID</th>
+                          <th className="py-3 px-4 w-[8%]">UID</th>
+                          <th className="py-3 px-4 w-[9%]">Protocol</th>
+                          <th className="py-3 px-4 w-[7%]">Sport</th>
+                          <th className="py-3 px-4 w-[7%]">Dport</th>
+                          <th className="py-3 px-4 w-[12%] cursor-pointer hover:bg-[#1c1c1c] transition-colors" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                             <div className="flex items-center gap-2">
-                              CMD
-                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18} /> : <ArrowUp01 size={18} />}</span>
+                              Timestamp
+                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowUp01 size={18} /> : <ArrowDown01 size={18} />}</span>
                             </div>
                           </th>
-                          <th className="py-3 px-4">Event Type</th>
-                          <th className="py-3 px-4">Src IP</th>
-                          <th className="py-3 px-4">Des IP</th>
-                          <th className="py-3 px-4">PID</th>
-                          <th className="py-3 px-4">UID</th>
-                          <th className="py-3 px-4">Protocol</th>
-                          <th className="py-3 px-4">Sport</th>
-                          <th className="py-3 px-4">Dport</th>
-                          <th className="py-3 px-4">Timestamp</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y-1 divide-transparent [&>tr:hover]:bg-blue-950/30 transition-colors">
                         {filteredAndSortedLogs.length > 0 ? (
                           filteredAndSortedLogs.map((log) => (
                             <tr key={log.id} className="hover:bg-[#121212] transition-colors group">
-                              <td className="py-3 px-4 text-white font-semibold group-hover:text-blue-400 transition-colors">
-                                {log.comm}
+                              <td className="py-3 px-4 text-white font-semibold group-hover:text-blue-400 transition-colors overflow-hidden text-ellipsis" title={log.comm}>
+                                {log.comm || "-"}
                               </td>
-                              <td className="py-3 px-4 text-white">{log.event_type}</td>
-                              <td className="py-3 px-4 text-white">{log.saddr || log.src_ip}</td>
-                              <td className="py-3 px-4 text-white">{log.daddr || log.dest_ip}</td>
-                              <td className="py-3 px-4 text-white">{log.pid}</td>
-                              <td className="py-3 px-4 text-white">{log.uid || log._uid}</td>
-                              <td className="py-3 px-4">
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.event_type || "-"}</td>
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.saddr || log.src_ip || "-"}</td>
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.daddr || log.dest_ip || "-"}</td>
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.pid || "-"}</td>
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.uid ?? log._uid ?? "-"}</td>
+                              <td className="py-3 px-4 overflow-hidden text-ellipsis">
                                 <span className="bg-[#1B263B]/30 border border-blue-900/50 px-2 py-0.5 text-sm text-blue-400 font-bold">
-                                  {log.protocol}
+                                  {log.protocol || "-"}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-white">{log.sport || "-"}</td>
-                              <td className="py-3 px-4 text-white">{log.dport || "-"}</td>
-                              <td className="py-3 px-4 text-white">
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.sport || "-"}</td>
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">{log.dport || "-"}</td>
+                              <td className="py-3 px-4 text-white overflow-hidden text-ellipsis">
                                 {log.timestamp ? new Date(log.timestamp).toLocaleString("vi-VN") : "-"}
                               </td>
                             </tr>
@@ -373,11 +367,8 @@ const NetproPage = () => {
                               <tr key={alert.id} className="hover:bg-red-950/20 transition-colors">
                                 <td className="py-2.5 px-3 text-sm text-white font-semibold">{alert.rule_name}</td>
                                 <td className="py-3 px-3">
-                                  <span className={`text-sm font-bold px-1.5 py-0.5 ${alert.severity === "CRITICAL" ? "bg-red-900 text-red-500" :
-                                    alert.severity === "HIGH" ? "bg-yellow-950 text-yellow-300 border border-yellow-900/40" :
-                                      "bg-amber-950 text-amber-400 border border-amber-900/40"
-                                    }`}>
-                                    {alert.severity}
+                                  <span className={`px-2 py-1 rounded text-[10px] font-bold ${(alert.packet_level || alert.rule_level || 0) > 10 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : (alert.packet_level || alert.rule_level || 0) >= 8 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
+                                    LVL {alert.packet_level || alert.rule_level || 0}
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-white text-sm">

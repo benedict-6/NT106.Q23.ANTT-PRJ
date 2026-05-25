@@ -34,6 +34,7 @@ app.use('/api/auth', authRoutes);           // Đăng ký / Đăng nhập UI
 app.use('/api/dashboard', dashRoutes);      // Quản lý Agent
 app.use('/api/agent', agentRoutes);         // Giao tiếp Agent 
 
+
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error("Lỗi kết nối Database:", err);

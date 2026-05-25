@@ -171,7 +171,7 @@ export const getSyslogs = async (agentId, timeRange) => {
  */
 export const getApplications = async (agentId, timeRange) => {
     try {
-        let query = `SELECT app_id as id, agent_id, software_name, _version, _timestamp
+        let query = `SELECT app_id as id, agent_id, software_name, _version
                      FROM applications`;
         const conditions = [];
         const params = [];
@@ -179,11 +179,6 @@ export const getApplications = async (agentId, timeRange) => {
         if (agentId && agentId !== 'all') {
             params.push(agentId);
             conditions.push(`agent_id = $${params.length}`);
-        }
-
-        const interval = getTimeRangeInterval(timeRange);
-        if (interval) {
-            conditions.push(`_timestamp >= NOW() - ${interval}`);
         }
 
         if (conditions.length > 0) {

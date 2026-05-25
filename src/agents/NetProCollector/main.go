@@ -167,13 +167,8 @@ func main() {
 		}
 		delete(meta, "daddr")
 
-		// ---------------- timestamp (GIỮ event time) ----------------
-		if ts, ok := meta["timestamp"].(float64); ok && ts > 0 {
-			t := time.Unix(0, int64(ts)).UTC()
-			meta["timestamp"] = t.Format("2006-01-02T15:04:05.000Z")
-		} else {
-			meta["timestamp"] = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
-		}
+		// ---------------- timestamp (Sử dụng thời gian hiện tại để tránh lỗi mốc 1970 từ ktime) ----------------
+		meta["timestamp"] = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 
 		// ---------------- clean field rỗng ----------------
 		for k, v := range meta {

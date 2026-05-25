@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -173,10 +175,7 @@ func performHandshake() error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Timeout: 10 * time.Second, Transport: tr}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("không thể kết nối Master Server: %w", err)
@@ -262,14 +261,33 @@ func sendBatch(batch [][]byte) {
 	}
 	gw.Close()
 
+	// 3. AES Encrypt
+	block, err := aes.NewCipher([]byte(currentConfig.SecretKey))
+	if err != nil {
+		log.Printf("Lỗi tạo cipher AES: %v", err)
+		return
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Printf("Lỗi GCM: %v", err)
+		return
+	}
+	nonce := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		log.Printf("Lỗi tạo nonce: %v", err)
+		return
+	}
+
+	ciphertext := aesgcm.Seal(nil, nonce, compressed.Bytes(), nil)
+	finalData := append(nonce, ciphertext...)
+
 	// 4. Send to server
-	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(compressed.Bytes()))
+	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(finalData))
 	if err != nil {
 		return
 	}
 
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Content-Encoding", "gzip")
 
 	// Thêm Session Token vào Header để xác thực
 	token := currentConfig.SessionToken
@@ -277,10 +295,7 @@ func sendBatch(batch [][]byte) {
 		req.Header.Set("authorization", "Bearer "+token)
 	}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Timeout: 10 * time.Second, Transport: tr}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to send data to server: %v", err)

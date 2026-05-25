@@ -5,23 +5,24 @@ import { handleAgentFimReport, handleAgentNetProReport, handleAgentLogReport, ha
 
 export default async function receiver(req, res) {
     try {
-        // Lấy agent_id từ session đã được verify và gán vào req.agent ở middleware
+        // Lấy agent_id và secret_key từ session
         const agent_id = req.agent ? req.agent.agent_id : null;
+        const secret_key = req.agent ? req.agent.secret_key : null;
 
-        if (!agent_id) {
+        if (!agent_id || !secret_key) {
             return res.status(401).json({ message: 'Từ chối truy cập! Không xác định được Agent.' });
         }
 
-        // Express đã tự giải nén gzip nhờ Content-Encoding header
-        const buffer = Buffer.isBuffer(req.body) ? req.body : req.body.data;
-        const records = decryptAgentPayload(buffer);
+        const encryptedBuffer = Buffer.isBuffer(req.body) ? req.body : req.body.data;
+
+        const records = await decryptAgentPayload(encryptedBuffer, secret_key);
 
         if (!records) {
-            return res.status(400).json({ message: 'Lỗi giải nén dữ liệu.' });
+            return res.status(400).json({ message: 'Lỗi giải mã hoặc parse dữ liệu.' });
         }
 
         // Trả về 200 OK cho Agent ngay lập tức để không block kết nối
-        res.status(200).json({ message: 'Giải nén dữ liệu thành công.' });
+        res.status(200).json({ message: 'Giải mã dữ liệu thành công.' });
 
         // Xử lý không đồng bộ các bản ghi trong batch
         (async () => {
