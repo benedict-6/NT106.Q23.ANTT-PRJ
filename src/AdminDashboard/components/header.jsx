@@ -141,17 +141,24 @@ export const AppHeader = ({route, hasAlerts: initialHasAlerts = false}) => {
                                                 >
                                                     ID: #{alert.id}
                                                 </span>
-                                                <span className={`text-xs px-2 py-1 rounded font-bold ${
-                                                    alert.packet_level > 10 ? 'bg-red-500/20 text-red-400' : 
-                                                    alert.packet_level >= 8 ? 'bg-orange-500/20 text-orange-400' : 
-                                                    'bg-blue-500/20 text-blue-400'
-                                                }`}>LVL {alert.packet_level}</span>
+                                                <div className="flex items-center space-x-2">
+                                                    {alert.agent_id && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono" title={`Agent ID: ${alert.agent_id}`}>
+                                                            {alert.agent_id}
+                                                        </span>
+                                                    )}
+                                                    <span className={`text-xs px-2 py-1 rounded font-bold ${
+                                                        alert.packet_level > 10 ? 'bg-red-500/20 text-red-400' : 
+                                                        alert.packet_level >= 8 ? 'bg-orange-500/20 text-orange-400' : 
+                                                        'bg-blue-500/20 text-blue-400'
+                                                    }`}>LVL {alert.packet_level}</span>
+                                                </div>
                                             </div>
                                             <div className="text-base text-gray-200 font-semibold leading-tight line-clamp-2">
                                                 {alert.rule_name || "Unknown Rule"}
                                             </div>
                                             <div className="text-sm text-gray-500">
-                                                {new Date(alert.created_at).toLocaleString('vi-VN')}
+                                                {new Date(alert.created_at || alert.timestamp || Date.now()).toLocaleString('vi-VN')}
                                             </div>
                                         </div>
                                     ))

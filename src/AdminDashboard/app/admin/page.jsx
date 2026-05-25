@@ -53,7 +53,8 @@ export default function AdminFleetView() {
       // ==========================================
       // NATIVE WEBSOCKET (PORT 6001)
       // ==========================================
-      const ws = new WebSocket('ws://localhost:6001');
+      const wsUrl = process.env.NEXT_PUBLIC_SOCKET_UI || "ws://localhost:6001";
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log("[Admin Socket] WebSocket đã kết nối!");

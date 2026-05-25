@@ -74,7 +74,7 @@ const evaluateCondition = (dataValue, operator, ruleValue) => {
 //   } 
 // }
 
-const checkThreshold = (rule, payload, agentId) => {
+const checkThreshold = (rule, payload, agentId, logTimestamp) => {
     const { rule_id, threshold } = rule;
     if (!thresholdCache[rule_id]) thresholdCache[rule_id] = {};
 
@@ -88,7 +88,7 @@ const checkThreshold = (rule, payload, agentId) => {
     }
 
 
-    const now = Date.now();
+    const now = logTimestamp ? new Date(logTimestamp).getTime() : Date.now();
     const cache = thresholdCache[rule_id];
 
     // 2. Khởi tạo cache nếu chưa có
@@ -150,7 +150,7 @@ export const evaluateData = (parsedData) => {
             // Đối với rule cần đếm
             if (rule.threshold) {
                 // Kiểm tra xem liệu có vượt ngưỡng
-                const thresholdTrigger = checkThreshold(rule, parsedData.payload, parsedData.agent_id);
+                const thresholdTrigger = checkThreshold(rule, parsedData.payload, parsedData.agent_id, parsedData.timestamp);
                 if (thresholdTrigger) {
                     const alertDetail = {
                         agent_id: parsedData.agent_id,
@@ -159,7 +159,8 @@ export const evaluateData = (parsedData) => {
                         rule_name: rule.rule_name,
                         packet_level: rule.packet_level,
                         category: rule.category,
-                        payload: parsedData.payload
+                        payload: parsedData.payload,
+                        created_at: new Date().toISOString()
                     };
                     triggeredAlerts.push(alertDetail);
 
@@ -180,7 +181,8 @@ export const evaluateData = (parsedData) => {
                     rule_name: rule.rule_name,
                     packet_level: rule.packet_level,
                     category: rule.category,
-                    payload: parsedData.payload
+                    payload: parsedData.payload,
+                    created_at: new Date().toISOString()
                 };
                 triggeredAlerts.push(alertDetail);
 

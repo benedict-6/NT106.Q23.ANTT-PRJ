@@ -65,10 +65,10 @@ const agentController = {
             // Sinh Session Token ngẫu nhiên
             const sessionToken = jwt.sign({ agent_id: agent.agent_id }, process.env.JWT_SECRET_SESSION_AGENT);
 
-            // Lưu Session Token vào DB + cập nhật trạng thái online (Giữ lại hostname tùy chỉnh nếu có)
+            // Lưu Session Token vào DB + cập nhật trạng thái online + luôn cập nhật hostname từ Agent
             await pool.query(
                 `UPDATE agents SET current_session = $1, last_active = NOW(), 
-                 hostname = CASE WHEN hostname IS NULL OR hostname = 'Unknown' OR hostname = '' THEN $3 ELSE hostname END,
+                 hostname = COALESCE($3, hostname),
                  mac_address = $4, agent_status = 'online'
                  WHERE agent_id = $2`,
                 [sessionToken, agent_id, req.body.hostname || null, mac_address || null]
