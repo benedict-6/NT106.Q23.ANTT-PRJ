@@ -136,15 +136,13 @@ export const saveRuleAlert = async (triggeredAlerts, alertObj, logId, createdAtD
                     agent_id, rule_id, packet_level, alert, created_at,
                     net_pro_id, net_pro_created_at,
                     file_log_id, file_integrity_created_at,
-                    log_monitoring_id, log_monitoring_created_at,
-                    app_id
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                    log_monitoring_id, log_monitoring_created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
                 [
                     alert.agent_id, alert.rule_id, alert.packet_level, alertObj || false, new Date().toISOString(),
                     net_pro_id, net_pro_created_at,
                     file_log_id, file_integrity_created_at,
-                    log_monitoring_id, log_monitoring_created_at,
-                    app_id
+                    log_monitoring_id, log_monitoring_created_at
                 ]
             );
         }
@@ -167,10 +165,10 @@ export const saveRuleAlertSoftware = async (cveList, agent_id, app_id) => {
             // 2. Ghi cảnh báo vào bảng rule_alert
             await pool.query(
                 `INSERT INTO rule_alert (
-                    agent_id, rule_id, packet_level, alert, app_id
-                ) VALUES ($1, $2, $3, $4, $5)`,
+                    agent_id, rule_id, packet_level, alert
+                ) VALUES ($1, $2, $3, $4)`,
                 [
-                    agent_id, cve.id, 15, true, app_id
+                    agent_id, cve.id, 15, true
                 ]
             );
         }

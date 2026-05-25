@@ -6,7 +6,6 @@
 import { getActiveRules } from "./parser.js";
 import { sendSocketAlert, sendEmailAlert } from "../actions/alerter.js";
 
-let activeRules = getActiveRules();
 // Bộ nhớ đệm lưu trữ trạng thái (State) cho các rule cần đếm theo thời gian (Threshold)
 const thresholdCache = {};
 
@@ -126,11 +125,12 @@ const checkThreshold = (rule, payload, agentId) => {
 
 export const evaluateData = (parsedData) => {
     const triggeredAlerts = [];
+    const currentRules = getActiveRules();
 
     //Duyet qua tung rule
-    for (const rule of activeRules) {
+    for (const rule of currentRules) {
         // 1. Bỏ qua nếu không đúng data_type
-        const ruleType = rule.type || rule.data_type;
+        const ruleType = rule.type || rule.data_type || rule.data_source;
         const dataType = parsedData.type || parsedData.data_type;
         if (ruleType && ruleType !== dataType) continue;
 

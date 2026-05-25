@@ -42,11 +42,7 @@ const NetproPage = () => {
   const uniqueAgentList = useMemo(() => {
     const listFromLogs = [...new Set(displayedLogs.map(log => log.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-<<<<<<< HEAD
     return ['all', ...new Set([...listFromApi, ...listFromLogs])];
-=======
-    return [...new Set([...listFromApi, ...listFromLogs])];
->>>>>>> main
   }, [agents, displayedLogs]);
 
   const [agentId, setAgentId] = useState("all");
@@ -58,11 +54,7 @@ const NetproPage = () => {
 
   // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
-<<<<<<< HEAD
-    if (isConnected) {
-=======
     if (agentId && isConnected) {
->>>>>>> main
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_SYSLOGS', agentId, isLive ? undefined : timeRange);
     }
@@ -131,21 +123,14 @@ const NetproPage = () => {
   };
 
   const getAgentName = (id) => {
-<<<<<<< HEAD
     if (id === 'all') return 'ALL';
-=======
->>>>>>> main
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
-<<<<<<< HEAD
       if (agentId !== 'all' && log.agent_id !== agentId) return false;
-=======
-      if (log.agent_id !== agentId) return false;
->>>>>>> main
 
       if (searchQuery &&
         !log.service.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -155,18 +140,16 @@ const NetproPage = () => {
 
       return true;
     }).sort((a, b) => {
-      if (sortOrder === "asc") return a.service.localeCompare(b.service);
-      return b.service.localeCompare(a.service);
+      const timeA = new Date(a.timestamp || 0).getTime();
+      const timeB = new Date(b.timestamp || 0).getTime();
+      if (sortOrder === "asc") return timeA - timeB;
+      return timeB - timeA;
     });
   }, [displayedLogs, agentId, searchQuery, sortOrder]);
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
-<<<<<<< HEAD
       if (agentId !== 'all' && alert.agent_id !== agentId) return false;
-=======
-      if (alert.agent_id !== agentId) return false;
->>>>>>> main
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [displayedAlerts, agentId]);
@@ -341,13 +324,13 @@ const NetproPage = () => {
                       <thead>
                         <tr className="sticky top-0 bg-[#141414] border-b border-[#232323] text-blue-500 font-bold uppercase tracking-wider z-10 shadow-[0_1px_0_0_#232323]">
                           <th className="py-3 px-4">File Path</th>
-                          <th className="py-3 px-4">Timestamp</th>
                           <th className="py-3 px-4 cursor-pointer hover:bg-[#1c1c1c] transition-colors" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                             <div className="flex items-center gap-2">
-                              Service
-                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18} /> : <ArrowUp01 size={18} />}</span>
+                              Timestamp
+                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowUp01 size={18} /> : <ArrowDown01 size={18} />}</span>
                             </div>
                           </th>
+                          <th className="py-3 px-4">Service</th>
                           <th className="py-3 px-4">PID</th>
                           <th className="py-3 px-4">Action</th>
                           <th className="py-3 px-4">Src IP</th>
@@ -366,23 +349,27 @@ const NetproPage = () => {
                                 {log.timestamp ? new Date(log.timestamp).toLocaleString("vi-VN") : "-"}
                               </td>
                               <td className="py-3 px-4 text-white font-semibold group-hover:text-blue-400 transition-colors">
-                                {log.service}
+                                {log.service || "-"}
                               </td>
-                              <td className="py-3 px-4 text-white">{log.pid}</td>
+                              <td className="py-3 px-4 text-white">{log.pid || "-"}</td>
                               <td className="py-3 px-4">
-                                <span className={`
-                                        ${log.action === "read" ? "bg-yellow/40 border border-yellow-900/60 text-yellow-300" :
-                                    log.action === "modify" ? "bg-red/40 border border-red-900/60 text-red-300" :
-                                      log.action === "delete" ? "bg-green/40 border border-green-900/60 text-green-300" :
-                                        log.action === "write" ? "bg-purple/40 border border-purple-900/60 text-purple-300" :
-                                          "bg-blue/40 border border-blue-900/60 text-blue-300"
-                                  } px-2 py-0.5 text-sm font-bold uppercase tracking-wide`}>
-                                  {log.action}
-                                </span>
+                                {log.action ? (
+                                  <span className={`
+                                          ${log.action === "read" ? "bg-yellow-900/40 border border-yellow-500/60 text-yellow-300" :
+                                      log.action === "modify" ? "bg-red-900/40 border border-red-500/60 text-red-300" :
+                                        log.action === "delete" ? "bg-green-900/40 border border-green-500/60 text-green-300" :
+                                          log.action === "write" ? "bg-purple-900/40 border border-purple-500/60 text-purple-300" :
+                                            "bg-blue-900/40 border border-blue-500/60 text-blue-300"
+                                    } px-2 py-0.5 text-sm font-bold uppercase tracking-wide`}>
+                                    {log.action}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-600">-</span>
+                                )}
                               </td>
-                              <td className="py-3 px-4 text-white">{log.src_ip}</td>
-                              <td className={`py-3 px-4 ${log.user === "root" ? "text-red-500" : "text-white"}`}>{log.user}</td>
-                              <td className="py-3 px-4 text-white">{log.port}</td>
+                              <td className="py-3 px-4 text-white">{log.src_ip || "-"}</td>
+                              <td className={`py-3 px-4 ${log.user === "root" ? "text-red-500" : "text-white"}`}>{log.user || "-"}</td>
+                              <td className="py-3 px-4 text-white">{log.port || "-"}</td>
                             </tr>
                           ))
                         ) : (
@@ -438,11 +425,8 @@ const NetproPage = () => {
                                   {alert.rule_name}
                                 </td>
                                 <td className="py-2.5 px-3">
-                                  <span className={`text-sm font-bold px-1.5 py-0.5 ${alert.severity === "CRITICAL" ? "bg-red-900 text-white" :
-                                    alert.severity === "HIGH" ? "bg-yellow-950 text-yellow-300 border border-yellow-900/40" :
-                                      "bg-amber-950 text-amber-400 border border-amber-900/40"
-                                    }`}>
-                                    {alert.severity}
+                                  <span className={`px-2 py-1 rounded text-[10px] font-bold ${(alert.packet_level || alert.rule_level || 0) > 10 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : (alert.packet_level || alert.rule_level || 0) >= 8 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
+                                    LVL {alert.packet_level || alert.rule_level || 0}
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-white text-sm group-hover:text-red-400">
