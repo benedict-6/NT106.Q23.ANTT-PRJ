@@ -207,22 +207,29 @@ func performHandshake() error {
 
 func handleConnection(conn net.Conn, dataCh chan<- []byte) {
 	defer conn.Close()
-	scanner := bufio.NewScanner(conn)
-	for scanner.Scan() {
-		b := scanner.Bytes()
-		if len(b) > 0 {
-			var msg AgentMessage
-			if err := json.Unmarshal(b, &msg); err == nil {
-				bCopy := make([]byte, len(b))
-				copy(bCopy, b)
-				dataCh <- bCopy
+	reader := bufio.NewReader(conn)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if len(line) > 0 {
+			b := bytes.TrimSuffix(line, []byte("\n"))
+			b = bytes.TrimSuffix(b, []byte("\r"))
+			if len(b) > 0 {
+				var msg AgentMessage
+				if err := json.Unmarshal(b, &msg); err == nil {
+					bCopy := make([]byte, len(b))
+					copy(bCopy, b)
+					dataCh <- bCopy
+				}
 			}
+		}
+		if err != nil {
+			break
 		}
 	}
 }
 
 func dataProcessor(dataCh <-chan []byte) { // dùng goroutine bất đồng bộ để xử lý và gửi data
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	var batch [][]byte

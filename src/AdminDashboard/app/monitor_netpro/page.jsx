@@ -11,9 +11,9 @@ import { AlwaysData, Hackaday, WireShark } from '../../helper/icons.jsx';
 import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
 const NetproPage = () => {
-  const { logs: socketLogs, alerts: socketAlerts, isConnected } = useDashboardSocket();
+  const { logs: socketLogs, alerts: socketAlerts, isConnected, dbLogs, setDbLogs, fetchDbLogsViaSocket } = useDashboardSocket();
   const [agents, setAgents] = useState([]);
-  
+
   // Lấy danh sách Agents từ API
   useEffect(() => {
     const fetchAgents = async () => {
@@ -53,7 +53,7 @@ const NetproPage = () => {
   }, [uniqueAgentList, agentId]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState("90");
+  const [timeRange, setTimeRange] = useState("24h");
   const [isLive, setIsLive] = useState(true);
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -61,12 +61,34 @@ const NetproPage = () => {
   const [displayedLogs, setDisplayedLogs] = useState([]);
   const [displayedAlerts, setDisplayedAlerts] = useState([]);
 
+  // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
+  useEffect(() => {
+    if (agentId && isConnected) {
+      setDbLogs([]); // Clear old state
+      fetchDbLogsViaSocket('FETCH_NETPRO_LOGS', agentId, isLive ? undefined : timeRange);
+    }
+  }, [agentId, isConnected, isLive, timeRange, fetchDbLogsViaSocket, setDbLogs]);
+
+  // Hợp nhất socketLogs (realtime) với dbLogs (historical) và lọc trùng
+  const combinedLogs = useMemo(() => {
+    const merged = [...socketLogs];
+    const socketIds = new Set(socketLogs.map(l => l.id));
+    dbLogs.forEach(log => {
+      if (!socketIds.has(log.id)) {
+        merged.push(log);
+      }
+    });
+    return merged;
+  }, [socketLogs, dbLogs]);
+
   useEffect(() => {
     if (isLive) {
-      setDisplayedLogs(socketLogs);
+      setDisplayedLogs(combinedLogs);
       setDisplayedAlerts(socketAlerts);
+    } else {
+      setDisplayedLogs(dbLogs);
     }
-  }, [socketLogs, socketAlerts, isLive]);
+  }, [combinedLogs, dbLogs, socketAlerts, isLive]);
 
   const handleCycleAgent = (direction) => {
     const currentIndex = uniqueAgentList.indexOf(agentId);
@@ -80,26 +102,19 @@ const NetproPage = () => {
     setAgentId(uniqueAgentList[nextIndex]);
   };
 
-  useEffect(() => {
-    if (!isLive) return;
-    // Optional: could ping or fetch historical here if needed
-  }, [isLive, agentId]);
+  const getAgentName = (id) => {
+    const agent = agents.find(a => a.agent_id === id);
+    return agent ? agent.hostname : id;
+  };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
       if (log.agent_id !== agentId) return false;
-      
+
       const commStr = log.comm || "";
       const eventTypeStr = log.event_type || "";
 
       if (searchQuery && !commStr.toLowerCase().includes(searchQuery.toLowerCase()) && !eventTypeStr.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-
-      const pullDate = new Date(log.timestamp);
-      const currentDate = new Date();
-      const diffTime = Math.abs(currentDate - pullDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
 
       return true;
     }).sort((a, b) => {
@@ -108,21 +123,14 @@ const NetproPage = () => {
       if (sortOrder === "asc") return commA.localeCompare(commB);
       return commB.localeCompare(commA);
     });
-  }, [displayedLogs, agentId, searchQuery, timeRange, sortOrder]);
+  }, [displayedLogs, agentId, searchQuery, sortOrder]);
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
       if (alert.agent_id !== agentId) return false;
-
-      const alertDate = new Date(alert.timestamp);
-      const currentDate = new Date();
-      const diffTime = Math.abs(currentDate - alertDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [displayedAlerts, agentId, timeRange]);
+  }, [displayedAlerts, agentId]);
 
   const alertMetrics = useMemo(() => {
     const now = new Date();
@@ -130,7 +138,7 @@ const NetproPage = () => {
 
     displayedAlerts.forEach((alert) => {
       if (alert.agent_id !== agentId) return;
-      
+
       const alertTime = new Date(alert.timestamp);
       const diffMs = Math.abs(now - alertTime);
       const diffMins = diffMs / (1000 * 60);
@@ -193,7 +201,7 @@ const NetproPage = () => {
                         : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
                         }`}
                     >
-                      {id}
+                      {getAgentName(id)}
                     </button>
                   ))}
                 </div>
@@ -223,11 +231,14 @@ const NetproPage = () => {
                       <select
                         value={timeRange}
                         onChange={(e) => setTimeRange(e.target.value)}
-                        className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
+                        disabled={isLive}
+                        className={`bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer ${isLive ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <option value="90">&gt; Last 90D</option>
-                        <option value="30">&gt; Last 30D</option>
-                        <option value="ALL">ALL</option>
+                        <option value="1m">Last 1 minute</option>
+                        <option value="30m">Last 30 minutes</option>
+                        <option value="24h">Last 24 hours</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
                       </select>
                     </div>
 
@@ -291,10 +302,10 @@ const NetproPage = () => {
                                 {log.comm}
                               </td>
                               <td className="py-3 px-4 text-white">{log.event_type}</td>
-                              <td className="py-3 px-4 text-white">{log.saddr}</td>
-                              <td className="py-3 px-4 text-white">{log.daddr}</td>
+                              <td className="py-3 px-4 text-white">{log.saddr || log.src_ip}</td>
+                              <td className="py-3 px-4 text-white">{log.daddr || log.dest_ip}</td>
                               <td className="py-3 px-4 text-white">{log.pid}</td>
-                              <td className="py-3 px-4 text-white">{log.uid}</td>
+                              <td className="py-3 px-4 text-white">{log.uid || log._uid}</td>
                               <td className="py-3 px-4">
                                 <span className="bg-[#1B263B]/30 border border-blue-900/50 px-2 py-0.5 text-sm text-blue-400 font-bold">
                                   {log.protocol}
@@ -303,7 +314,7 @@ const NetproPage = () => {
                               <td className="py-3 px-4 text-white">{log.sport || "-"}</td>
                               <td className="py-3 px-4 text-white">{log.dport || "-"}</td>
                               <td className="py-3 px-4 text-white">
-                                {new Date(log.timestamp).toLocaleString("vi-VN", { timeZone: "UTC" })}
+                                {log.timestamp ? new Date(log.timestamp).toLocaleString("vi-VN") : "-"}
                               </td>
                             </tr>
                           ))
@@ -370,7 +381,7 @@ const NetproPage = () => {
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-white text-sm">
-                                  {new Date(alert.timestamp).toLocaleString("vi-VN", { timeZone: "UTC" })}
+                                  {alert.timestamp ? new Date(alert.timestamp).toLocaleString("vi-VN") : "-"}
                                 </td>
                               </tr>
                             ))

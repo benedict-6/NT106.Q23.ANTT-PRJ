@@ -1,26 +1,40 @@
-import zlib from 'zlib';
-
 import { masterkey } from '../../shared/config/index.js';
 
 /**
- * Giải nén dữ liệu Gzip gửi từ Agent
- * @param {Buffer|Uint8Array} buffer Dữ liệu nhị phân thô
- * @returns {Object|null} Dữ liệu JSON đã giải nén thành công
+ * Xử lý payload từ Agent
+ * 
+ * Luồng dữ liệu:
+ *   Agent: JSON → Gzip → HTTP (Content-Encoding: gzip)
+ *   Express: HTTP → auto gunzip → req.body (đã là JSON thuần)
+ *   Hàm này: req.body → JSON.parse
+ * 
+ * Express tự giải nén gzip nhờ header Content-Encoding: gzip,
+ * nên buffer nhận được ở đây đã là dữ liệu thô (plain text JSON).
+ * 
+ * @param {Buffer} buffer Dữ liệu đã được Express giải nén
+ * @returns {Object|null} JSON object hoặc null nếu lỗi
  */
 export const decryptAgentPayload = (buffer) => {
     try {
         if (!buffer || buffer.length === 0) {
-            console.error('[CryptoUtils] Dữ liệu buffer rỗng hoặc không hợp lệ.');
+            console.error('[Payload] Buffer rỗng hoặc không hợp lệ.');
             return null;
         }
 
-        // 1. Giải nén Gzip (Vì Go Agent nén dữ liệu bằng Gzip)
-        const decompressed = zlib.gunzipSync(buffer);
+        const decryptedString = buffer.toString('utf8').trim();
+        if (!decryptedString) return [];
 
-        // 2. Chuyển đổi sang JSON Object
-        return JSON.parse(decompressed.toString('utf8'));
+        const lines = decryptedString.split('\n');
+        const records = [];
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed) {
+                records.push(JSON.parse(trimmed));
+            }
+        }
+        return records;
     } catch (err) {
-        console.error('[CryptoUtils] Lỗi khi giải nén payload từ Agent:', err.message);
+        console.error('[Payload] Lỗi parse JSON:', err.message);
         return null;
     }
 };

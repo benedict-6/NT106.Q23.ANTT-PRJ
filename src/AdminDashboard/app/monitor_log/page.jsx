@@ -12,7 +12,7 @@ import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
 // removed CURRENT_ANCHOR_TIME
 const NetproPage = () => {
-  const { logs: socketLogs, alerts: socketAlerts, isConnected } = useDashboardSocket();
+  const { logs: socketLogs, alerts: socketAlerts, isConnected, dbLogs, setDbLogs, fetchDbLogsViaSocket } = useDashboardSocket();
   const [agents, setAgents] = useState([]);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ const NetproPage = () => {
   const uniqueAgentList = useMemo(() => {
     const listFromLogs = [...new Set(displayedLogs.map(log => log.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-    return [...new Set([...listFromApi, ...listFromLogs])].slice(0, 3);
+    return [...new Set([...listFromApi, ...listFromLogs])];
   }, [agents, displayedLogs]);
 
   const [agentId, setAgentId] = useState("");
@@ -53,65 +53,108 @@ const NetproPage = () => {
     }
   }, [uniqueAgentList, agentId]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState("90"); 
+  const [timeRange, setTimeRange] = useState("24h");
   const [isLive, setIsLive] = useState(true);
   const [sortOrder, setSortOrder] = useState("desc");
+
+  // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
+  useEffect(() => {
+    if (agentId && isConnected) {
+      setDbLogs([]); // Clear old state
+      fetchDbLogsViaSocket('FETCH_SYSLOGS', agentId, isLive ? undefined : timeRange);
+    }
+  }, [agentId, isConnected, isLive, timeRange, fetchDbLogsViaSocket, setDbLogs]);
+
+  // Hợp nhất socketLogs (realtime) với dbLogs (historical) và lọc trùng, chuẩn hóa trường tránh lỗi undefined
+  const combinedLogs = useMemo(() => {
+    const liveSys = socketLogs.filter(log => log.type === 'log_monitoring' || log._service || log.service).map(log => ({
+      ...log,
+      service: log.service || log._service || '',
+      action: log.action || log._action || '',
+      file_path: log.file_path || log.file || '',
+      user: log.user || log._user || '',
+      src_ip: log.src_ip || log.saddr || '',
+      timestamp: log.timestamp || log._timestamp || new Date().toISOString()
+    }));
+
+    const dbSys = dbLogs.map(log => ({
+      ...log,
+      service: log.service || log._service || '',
+      action: log.action || log._action || '',
+      file_path: log.file_path || log.file || '',
+      user: log.user || log._user || '',
+      src_ip: log.src_ip || log.saddr || '',
+      timestamp: log.timestamp || log._timestamp || new Date().toISOString()
+    }));
+
+    const merged = [...liveSys];
+    const socketIds = new Set(liveSys.map(l => l.id));
+    dbSys.forEach(log => {
+      if (!socketIds.has(log.id)) {
+        merged.push(log);
+      }
+    });
+    return merged;
+  }, [socketLogs, dbLogs]);
+
+  useEffect(() => {
+    if (isLive) {
+      setDisplayedLogs(combinedLogs);
+      setDisplayedAlerts(socketAlerts);
+    } else {
+      const dbSys = dbLogs.map(log => ({
+        ...log,
+        service: log.service || log._service || '',
+        action: log.action || log._action || '',
+        file_path: log.file_path || log.file || '',
+        user: log.user || log._user || '',
+        src_ip: log.src_ip || log.saddr || '',
+        timestamp: log.timestamp || log._timestamp || new Date().toISOString()
+      }));
+      setDisplayedLogs(dbSys);
+    }
+  }, [combinedLogs, dbLogs, socketAlerts, isLive]);
 
   const handleCycleAgent = (direction) => {
     const currentIndex = uniqueAgentList.indexOf(agentId);
     if (currentIndex === -1) return;
-    
+
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    
+
     if (nextIndex >= uniqueAgentList.length) nextIndex = 0;
     if (nextIndex < 0) nextIndex = uniqueAgentList.length - 1;
-    
+
     setAgentId(uniqueAgentList[nextIndex]);
   };
 
-  useEffect(() => {
-    if (!isLive) return;
-    setDisplayedLogs(socketLogs.filter(log => log.type === 'log_monitoring'));
-    setDisplayedAlerts(socketAlerts);
-  }, [isLive, socketLogs, socketAlerts]);
+  const getAgentName = (id) => {
+    const agent = agents.find(a => a.agent_id === id);
+    return agent ? agent.hostname : id;
+  };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
       if (log.agent_id !== agentId) return false;
-      
-      if (searchQuery && 
-          !log.service.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          !log.action.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !log.file_path.toLowerCase().includes(searchQuery.toLowerCase())
-      ) return false;
 
-      const pullDate = new Date(log.timestamp);
-      const currentDate = new Date();
-      const diffTime = Math.abs(currentDate - pullDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
+      if (searchQuery &&
+        !log.service.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !log.action.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !log.file_path.toLowerCase().includes(searchQuery.toLowerCase())
+      ) return false;
 
       return true;
     }).sort((a, b) => {
       if (sortOrder === "asc") return a.service.localeCompare(b.service);
       return b.service.localeCompare(a.service);
     });
-  }, [displayedLogs, agentId, searchQuery, timeRange, sortOrder]);
+  }, [displayedLogs, agentId, searchQuery, sortOrder]);
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
       if (alert.agent_id !== agentId) return false;
-
-      const alertDate = new Date(alert.timestamp);
-      const currentDate = new Date();
-      const diffTime = Math.abs(currentDate - alertDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [displayedAlerts, agentId, timeRange]);
+  }, [displayedAlerts, agentId]);
 
   const logProportions = useMemo(() => {
     const counts = {};
@@ -123,11 +166,11 @@ const NetproPage = () => {
     if (total === 0) return [];
 
     const actionColorMap = {
-      read: '#eab308',    
-      modify: '#ef4444', 
-      delete: '#22c55e',  
-      write: '#a855f7',   
-      execute: '#3b82f6', 
+      read: '#eab308',
+      modify: '#ef4444',
+      delete: '#22c55e',
+      write: '#a855f7',
+      execute: '#3b82f6',
     };
 
     let accumulatedPercent = 0;
@@ -138,13 +181,13 @@ const NetproPage = () => {
       const circumference = 2 * Math.PI * radius;
       const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
       const strokeDashoffset = `${-(accumulatedPercent / 100) * circumference}`;
-      
+
       accumulatedPercent += percentage;
       return {
         action,
         count,
         percentage: percentage.toFixed(1),
-        color: actionColorMap[action] || actionColorMap.execute, 
+        color: actionColorMap[action] || actionColorMap.execute,
         strokeDasharray,
         strokeDashoffset
       };
@@ -168,14 +211,14 @@ const NetproPage = () => {
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <AppHeader route={'security/logs'} />
- 
+
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none overflow-hidden z-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/5 rounded-full blur-[160px]" />
           <div className="scanline opacity-10" />
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 relative z-10 w-full">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
@@ -205,13 +248,12 @@ const NetproPage = () => {
                     <button
                       key={id}
                       onClick={() => setAgentId(id)}
-                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${
-                        agentId === id
-                          ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                          : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
-                      }`}
+                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${agentId === id
+                        ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                        : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
+                        }`}
                     >
-                      {id}
+                      {getAgentName(id)}
                     </button>
                   ))}
                 </div>
@@ -230,22 +272,25 @@ const NetproPage = () => {
               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
               <div className="absolute top-0 right-0 w-2 h-8 bg-blue-500/10" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-              
+
               <div className="bg-[#111] p-6 border border-[#232323] space-y-4">
-                
+
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-1">
                   <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                    
+
                     <div className="flex flex-col gap-2">
                       <span className="text-md font-bold tracking-widest text-blue-500 uppercase font-mono">Time Interval</span>
                       <select
                         value={timeRange}
                         onChange={(e) => setTimeRange(e.target.value)}
-                        className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
+                        disabled={isLive}
+                        className={`bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer ${isLive ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <option value="90">&gt; Last 90D</option>
-                        <option value="30">&gt; Last 30D</option>
-                        <option value="ALL">ALL</option>
+                        <option value="1m">Last 1 minute</option>
+                        <option value="30m">Last 30 minutes</option>
+                        <option value="24h">Last 24 hours</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
                       </select>
                     </div>
 
@@ -264,11 +309,10 @@ const NetproPage = () => {
                   <div className="flex items-center self-end md:self-center">
                     <button
                       onClick={() => setIsLive(!isLive)}
-                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${
-                        isLive 
-                          ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]" 
-                          : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${isLive
+                        ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
+                        : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
+                        }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
                       {isLive ? "LIVE: ON" : "LIVE: OFF"}
@@ -286,7 +330,7 @@ const NetproPage = () => {
                           <th className="py-3 px-4 cursor-pointer hover:bg-[#1c1c1c] transition-colors" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                             <div className="flex items-center gap-2">
                               Service
-                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18}/> : <ArrowUp01 size={18}/>}</span>
+                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18} /> : <ArrowUp01 size={18} />}</span>
                             </div>
                           </th>
                           <th className="py-3 px-4">PID</th>
@@ -304,25 +348,25 @@ const NetproPage = () => {
                                 {log.file_path}
                               </td>
                               <td className="py-3 px-4 text-white">
-                                {new Date(log.timestamp).toLocaleString("vi-VN", { timeZone: "UTC" })}
+                                {log.timestamp ? new Date(log.timestamp).toLocaleString("vi-VN") : "-"}
                               </td>
                               <td className="py-3 px-4 text-white font-semibold group-hover:text-blue-400 transition-colors">
                                 {log.service}
                               </td>
                               <td className="py-3 px-4 text-white">{log.pid}</td>
-                              <td className="py-3 px-4">                                
-                                    <span className={`
-                                        ${log.action === "read"? "bg-yellow/40 border border-yellow-900/60 text-yellow-300":
-                                          log.action === "modify"? "bg-red/40 border border-red-900/60 text-red-300":
-                                          log.action === "delete"? "bg-green/40 border border-green-900/60 text-green-300":
-                                          log.action === "write"? "bg-purple/40 border border-purple-900/60 text-purple-300":
+                              <td className="py-3 px-4">
+                                <span className={`
+                                        ${log.action === "read" ? "bg-yellow/40 border border-yellow-900/60 text-yellow-300" :
+                                    log.action === "modify" ? "bg-red/40 border border-red-900/60 text-red-300" :
+                                      log.action === "delete" ? "bg-green/40 border border-green-900/60 text-green-300" :
+                                        log.action === "write" ? "bg-purple/40 border border-purple-900/60 text-purple-300" :
                                           "bg-blue/40 border border-blue-900/60 text-blue-300"
-                                    } px-2 py-0.5 text-sm font-bold uppercase tracking-wide`}>
-                                        {log.action}
-                                    </span>
+                                  } px-2 py-0.5 text-sm font-bold uppercase tracking-wide`}>
+                                  {log.action}
+                                </span>
                               </td>
                               <td className="py-3 px-4 text-white">{log.src_ip}</td>
-                              <td className={`py-3 px-4 ${log.user === "root"? "text-red-500" : "text-white"}`}>{log.user}</td>
+                              <td className={`py-3 px-4 ${log.user === "root" ? "text-red-500" : "text-white"}`}>{log.user}</td>
                               <td className="py-3 px-4 text-white">{log.port}</td>
                             </tr>
                           ))
@@ -330,7 +374,7 @@ const NetproPage = () => {
                           <tr>
                             <td colSpan="8" className="py-16 h-30 text-center text-red-400 uppercase font-bold tracking-widest text-md">
                               <div className="flex items-center justify-center gap-2">
-                                <CircleAlert size={16} /> 
+                                <CircleAlert size={16} />
                                 Oops nothing here
                               </div>
                             </td>
@@ -340,10 +384,10 @@ const NetproPage = () => {
                     </table>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center text-md font-mono text-gray-600 uppercase tracking-wider pt-2">
                   <div>
-                    Found: <span className="text-blue-400">{filteredAndSortedLogs.length}</span> result{filteredAndSortedLogs.length > 1? "s" : ""}
+                    Found: <span className="text-blue-400">{filteredAndSortedLogs.length}</span> result{filteredAndSortedLogs.length > 1 ? "s" : ""}
                   </div>
                 </div>
 
@@ -354,10 +398,10 @@ const NetproPage = () => {
               <div className="bg-[#0D0D0D]/80 backdrop-blur-xl border border-[#2A2A2A] rounded-none p-1 relative overflow-hidden group shadow-2xl">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-red-500/40 group-hover:border-red-500 transition-colors duration-500" />
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-red-500/40 group-hover:border-red-500 transition-colors duration-500" />
-                
+
                 <div className="bg-[#111] p-4 border border-[#232323] space-y-4">
                   <div className="flex items-center gap-2 pb-2">
-                    <Hackaday/>
+                    <Hackaday />
                     <span className="text-md font-bold font-mono text-red-400 uppercase tracking-wider">Alerts</span>
                   </div>
 
@@ -379,16 +423,15 @@ const NetproPage = () => {
                                   {alert.rule_name}
                                 </td>
                                 <td className="py-2.5 px-3">
-                                  <span className={`text-sm font-bold px-1.5 py-0.5 ${
-                                    alert.severity === "CRITICAL" ? "bg-red-900 text-white" :
+                                  <span className={`text-sm font-bold px-1.5 py-0.5 ${alert.severity === "CRITICAL" ? "bg-red-900 text-white" :
                                     alert.severity === "HIGH" ? "bg-yellow-950 text-yellow-300 border border-yellow-900/40" :
-                                    "bg-amber-950 text-amber-400 border border-amber-900/40"
-                                  }`}>
+                                      "bg-amber-950 text-amber-400 border border-amber-900/40"
+                                    }`}>
                                     {alert.severity}
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-3 text-white text-sm group-hover:text-red-400">
-                                  {new Date(alert.timestamp).toLocaleString("vi-VN", { timeZone: "UTC" })}
+                                  {alert.timestamp ? new Date(alert.timestamp).toLocaleString("vi-VN") : "-"}
                                 </td>
                               </tr>
                             ))
@@ -409,10 +452,10 @@ const NetproPage = () => {
               <div className="bg-[#0D0D0D]/80 backdrop-blur-xl border border-[#2A2A2A] rounded-none p-1 relative overflow-hidden group shadow-2xl">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-                
+
                 <div className="bg-[#111] p-4 border border-[#232323] space-y-4 h-full flex flex-col">
                   <div className="flex items-center gap-2 pb-2">
-                    <Graph/>
+                    <Graph />
                     <span className="text-md font-bold font-mono text-blue-400 uppercase tracking-wider">Graph</span>
                   </div>
 
