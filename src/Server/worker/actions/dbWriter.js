@@ -16,7 +16,7 @@ export const writeLogToDB = async (parsedData) => {
     }
 
     const { agent_id, type, payload } = parsedData;
-    const createdAt = payload.timestamp || new Date().toISOString();
+    const createdAt = new Date().toISOString();
 
     try {
         if (type === 'file_integrity') {

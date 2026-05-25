@@ -13,12 +13,12 @@ import { Windows } from '../../helper/renderUI.js';
 
 export default function CreateAgentPage() {
   const router = useRouter();
-  
+
   const [formData, setFormData] = useState({
     agentName: '',
     osType: 'linux'
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
@@ -69,7 +69,7 @@ export default function CreateAgentPage() {
     e.preventDefault();
     setIsLoading(true);
     const token = localStorage.getItem('token');
-    const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
+    const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL;
 
     try {
       const downloadResponse = await fetch(`${masterUrl}/api/dashboard/agents/download/${successData.agent_data.agent_id}`, {
@@ -85,12 +85,12 @@ export default function CreateAgentPage() {
       const fileUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = fileUrl;
-      
-      link.setAttribute('download', `siem-agent-${successData.agent_data.agent_id}.zip`);
-      
+
+      link.setAttribute('download', `siem-agent-${successData.agent_data.agent_id}.deb`);
+
       document.body.appendChild(link);
       link.click();
-      
+
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(fileUrl);
     } catch (error) {
@@ -114,18 +114,18 @@ export default function CreateAgentPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 relative z-10 w-full">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="max-w-7xl mx-auto space-y-5"
           >
             <div className="flex items-center justify-between border-none mb-4">
-              <button 
+              <button
                 onClick={() => router.push('/')}
                 className="flex items-center gap-2 font-mono text-md text-gray-500 hover:text-blue-400 transition-colors duration-200 uppercase tracking-widest"
               >
-                <Lazarus/>
+                <Lazarus />
                 <span className='font-mono text-xl font-semibold'>BACK</span>
               </button>
             </div>
@@ -135,11 +135,11 @@ export default function CreateAgentPage() {
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
                 <div className="absolute top-0 right-0 w-2 h-8 bg-blue-500/10" />
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-                
+
                 <div className="bg-[#111] p-6 border border-[#232323] space-y-6">
                   <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                     <div className="p-3 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded-full">
-                      <GodotEngine/>
+                      <GodotEngine />
                     </div>
                     <div>
                       <h3 className="text-md font-semibold font-mono uppercase tracking-widest text-blue-500">Start Engine</h3>
@@ -164,32 +164,30 @@ export default function CreateAgentPage() {
                     <div className="flex flex-col gap-2">
                       <span className="text-lg font-bold tracking-tight text-gray-400 uppercase">OS</span>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    
-                        <div 
+
+                        <div
                           onClick={() => !(isLoading || successData) && setFormData(p => ({ ...p, osType: 'linux' }))}
-                          className={`items-center p-4 border text-md font-bold transition-all duration-300 rounded-none cursor-pointer flex flex-col justify-between ${
-                            formData.osType === 'linux'
-                              ? "bg-blue-950/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
-                              : "bg-[#0A0A0A] border-[#2A2A2A] text-gray-500 hover:text-gray-300 hover:border-[#333]"
-                          }`}
+                          className={`items-center p-4 border text-md font-bold transition-all duration-300 rounded-none cursor-pointer flex flex-col justify-between ${formData.osType === 'linux'
+                            ? "bg-blue-950/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+                            : "bg-[#0A0A0A] border-[#2A2A2A] text-gray-500 hover:text-gray-300 hover:border-[#333]"
+                            }`}
                         >
-                            <div className='flex flex-row gap-x-2 items-center'>
-                                <Linux/>
-                                <span className="text-md font-bold uppercase tracking-wide">Linux</span>
-                            </div>
+                          <div className='flex flex-row gap-x-2 items-center'>
+                            <Linux />
+                            <span className="text-md font-bold uppercase tracking-wide">Linux</span>
+                          </div>
                         </div>
-                        <div 
+                        <div
                           onClick={() => !(isLoading || successData) && setFormData(p => ({ ...p, osType: 'windows' }))}
-                          className={`items-center p-4 border text-md font-bold transition-all duration-300 rounded-none cursor-pointer flex flex-col justify-between ${
-                            formData.osType === 'windows'
-                              ? "bg-blue-950/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
-                              : "bg-[#0A0A0A] border-[#2A2A2A] text-gray-500 hover:text-gray-300 hover:border-[#333]"
-                          }`}
+                          className={`items-center p-4 border text-md font-bold transition-all duration-300 rounded-none cursor-pointer flex flex-col justify-between ${formData.osType === 'windows'
+                            ? "bg-blue-950/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+                            : "bg-[#0A0A0A] border-[#2A2A2A] text-gray-500 hover:text-gray-300 hover:border-[#333]"
+                            }`}
                         >
-                        <div className='flex flex-row items-center gap-x-2'>
-                            <Windows/>
+                          <div className='flex flex-row items-center gap-x-2'>
+                            <Windows />
                             <span className="text-md font-bold uppercase tracking-wide">Windows</span>
-                        </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -222,7 +220,7 @@ export default function CreateAgentPage() {
                         {isLoading ? (
                           <>
                             <Loader2 size={16} className="animate-spin" />
-                            Đang đóng gói binary...
+                            Đang tạo agent...
                           </>
                         ) : (
                           <>
@@ -239,19 +237,19 @@ export default function CreateAgentPage() {
               <div className="bg-[#0D0D0D]/80 backdrop-blur-xl border border-[#2A2A2A] rounded-none p-1 relative overflow-hidden group shadow-2xl min-h-[415px] flex flex-col justify-between">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-                
+
                 <div className="bg-[#111] p-5 border border-[#232323] h-full flex flex-col justify-between flex-1 space-y-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-3">
                       <span className="text-sm font-bold font-mono text-gray-400 flex items-center gap-1.5 uppercase tracking-widest">
-                        <Android/> Progress
+                        <Android /> Progress
                       </span>
                       <span className={`h-2 w-2 rounded-full ${successData ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
                     </div>
 
                     {!successData ? (
                       <div className="text-white flex flex-row space-x-2 text-sm font-mono text-gray-600 py-16 text-center tracking-wide leading-relaxed">
-                        <LoaderCircle size={20} className="animate-spin"/>
+                        <LoaderCircle size={20} className="animate-spin" />
                         <span>Loading data...</span>
                       </div>
                     ) : (
@@ -259,13 +257,13 @@ export default function CreateAgentPage() {
                         <div className="flex items-center gap-2 text-green-400 text-xs font-bold uppercase tracking-wider">
                           <CheckCircle2 size={15} /> Đã kích hoạt ID: {successData.agent_data.agent_id}
                         </div>
-                        
+
                         <div className="bg-[#050505] p-3 border border-[#232323] text-[11px] text-green-500 space-y-2 overflow-x-auto leading-relaxed">
                           <p className="text-gray-600"># Chạy lệnh sau tại máy chủ mục tiêu với quyền Root/Admin:</p>
                           {formData.osType === 'linux' ? (
                             <>
-                              <p className="text-gray-300">unzip siem-agent-{successData.agent_data.agent_id}.zip</p>
-                              <p className="text-blue-400">sudo dpkg -i siem-agent_1.0.0_amd64.deb</p>
+                              {/* <p className="text-gray-300"># Không cần giải nén. Cài đặt trực tiếp:</p> */}
+                              <p className="text-blue-400">sudo dpkg -i siem-agent-{successData.agent_data.agent_id}.deb</p>
                             </>
                           ) : (
                             <>
@@ -274,16 +272,16 @@ export default function CreateAgentPage() {
                             </>
                           )}
                         </div>
-                        
+
                         <p className="text-[10px] text-gray-500 leading-normal">
-                          * Tệp cấu hình agent_config.json đã được đóng gói kèm trong file ZIP. Agent sẽ tự động nạp cấu hình khi khởi động.
+                          * Tệp cấu hình agent_config.json đã được đóng gói thẳng vào bên trong file DEB bằng kỹ thuật dynamic packaging. Agent sẽ tự động nạp cấu hình.
                         </p>
                       </div>
                     )}
                   </div>
 
                   {successData && (
-                    <button 
+                    <button
                       onClick={() => {
                         setSuccessData(null);
                         setFormData({ agentName: '', osType: 'linux' });

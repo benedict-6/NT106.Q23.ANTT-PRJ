@@ -13,17 +13,16 @@ import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 export default function FimDashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  
-  const { logs: socketLogs, isConnected } = useDashboardSocket();
+
+  const { logs: socketLogs, isConnected, dbLogs, setDbLogs, fetchDbLogsViaSocket } = useDashboardSocket();
   const [displayedLogs, setDisplayedLogs] = useState([]);
-  
+
   const [selectedAgent, setSelectedAgent] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [timeRange, setTimeRange] = useState('1d'); 
+  const [timeRange, setTimeRange] = useState('24h');
   const [isLive, setIsLive] = useState(true);
 
   const [agents, setAgents] = useState([]);
-  const [fimLogs, setFimLogs] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -34,44 +33,74 @@ export default function FimDashboard() {
     setMounted(true);
 
     const fetchAgents = async () => {
-       const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
-       try {
-         const res = await fetch(`${masterUrl}/api/dashboard/agents`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-         });
-         if (res.ok) {
-            const data = await res.json();
-            setAgents(data.agents || []);
-         }
-       } catch (error) {
-         console.error("Error loading agent: ", error);
-       }
+      const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
+      try {
+        const res = await fetch(`${masterUrl}/api/dashboard/agents`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAgents(data.agents || []);
+        }
+      } catch (error) {
+        console.error("Error loading agent: ", error);
+      }
     };
 
     fetchAgents();
   }, [router]);
 
+  // Gửi request lấy historical db logs khi selectedAgent thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
+  useEffect(() => {
+    if (isConnected) {
+      setDbLogs([]); // Clear old state
+      fetchDbLogsViaSocket('FETCH_FIM_LOGS', selectedAgent, isLive ? undefined : timeRange);
+    }
+  }, [selectedAgent, isConnected, isLive, timeRange, fetchDbLogsViaSocket, setDbLogs]);
+
+  // Hợp nhất socketLogs (realtime) với dbLogs (historical) và lọc trùng
+  const combinedLogs = useMemo(() => {
+    // Chỉ lấy log FIM từ live
+    const liveFim = socketLogs.filter(log => log.type === 'file_integrity');
+    const merged = [...liveFim];
+    const socketIds = new Set(liveFim.map(l => l.id));
+    dbLogs.forEach(log => {
+      if (!socketIds.has(log.id)) {
+        merged.push(log);
+      }
+    });
+    return merged;
+  }, [socketLogs, dbLogs]);
+
   useEffect(() => {
     if (isLive) {
-      setDisplayedLogs(socketLogs.filter(log => log.type === 'file_integrity'));
+      setDisplayedLogs(combinedLogs);
+    } else {
+      setDisplayedLogs(dbLogs);
     }
-  }, [socketLogs, isLive]);
+  }, [combinedLogs, dbLogs, isLive]);
 
   const agentTabs = useMemo(() => {
     const listFromLogs = [...new Set(displayedLogs.map(log => log.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-    return ['all', ...new Set([...listFromApi, ...listFromLogs])].slice(0, 4); // Limit to 3 agents + 'all'
+    return ['all', ...new Set([...listFromApi, ...listFromLogs])];
   }, [agents, displayedLogs]);
 
   const handleCycleAgent = (direction) => {
     const currentIndex = agentTabs.indexOf(selectedAgent);
     if (currentIndex === -1) return;
-    
+
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     if (nextIndex >= agentTabs.length) nextIndex = 0;
     if (nextIndex < 0) nextIndex = agentTabs.length - 1;
-    
+
     setSelectedAgent(agentTabs[nextIndex]);
+  };
+
+  const getAgentName = (id) => {
+    if (id === 'all') return 'ALL';
+    const agent = agents.find(a => a.agent_id === id);
+    return agent ? agent.hostname : id;
   };
 
   // Removed mock setInterval
@@ -80,7 +109,7 @@ export default function FimDashboard() {
     return displayedLogs.filter(log => {
       const matchesAgent = selectedAgent === 'all' || log.agent_id === selectedAgent;
       const matchesSearch = log.file_path?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            log.event_type?.toLowerCase().includes(searchQuery.toLowerCase());
+        log.event_type?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesAgent && matchesSearch;
     });
   }, [displayedLogs, selectedAgent, searchQuery]);
@@ -90,7 +119,7 @@ export default function FimDashboard() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] font-sans selection:bg-blue-500/30">
       <SideBar />
-      
+
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <AppHeader route={"security/fim"} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none overflow-hidden z-0">
@@ -98,7 +127,7 @@ export default function FimDashboard() {
           <div className="scanline opacity-10" />
         </div>
         <div className="flex-1 overflow-y-auto py-6 px-4 relative z-10 w-full">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
@@ -107,7 +136,7 @@ export default function FimDashboard() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-none mb-4 gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded-full">
-                  <LibreWolf/>
+                  <LibreWolf />
                 </div>
                 <div>
                   <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">FIM {isConnected ? <span className="text-green-500 text-xs ml-2">● CONNECTED</span> : <span className="text-red-500 text-xs ml-2">● DISCONNECTED</span>}</h3>
@@ -128,13 +157,12 @@ export default function FimDashboard() {
                     <button
                       key={id}
                       onClick={() => setSelectedAgent(id)}
-                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${
-                        selectedAgent === id
-                          ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                          : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
-                      }`}
+                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${selectedAgent === id
+                        ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                        : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
+                        }`}
                     >
-                      {id === 'all' ? 'ALL' : id}
+                      {getAgentName(id)}
                     </button>
                   ))}
                 </div>
@@ -153,23 +181,24 @@ export default function FimDashboard() {
               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
               <div className="absolute top-0 right-0 w-2 h-8 bg-blue-500/10" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-              
+
               <div className="bg-[#111] p-6 border border-[#232323] space-y-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4">
                   <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                    
+
                     <div className="flex flex-col gap-2">
                       <span className="text-md font-bold tracking-widest text-blue-500 uppercase font-mono">Time Interval</span>
                       <select
                         value={timeRange}
                         onChange={(e) => setTimeRange(e.target.value)}
-                        className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
+                        disabled={isLive}
+                        className={`bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer ${isLive ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <option value="1m">&gt; Last 1Min</option>
-                        <option value="60m">&gt; Last 60Min</option>
-                        <option value="1d">&gt; Last 24H</option>
-                        <option value="30d">&gt; Last 30D</option>
-                        <option value="90d">&gt; Last 90D</option>
+                        <option value="1m">Last 1 minute</option>
+                        <option value="30m">Last 30 minutes</option>
+                        <option value="24h">Last 24 hours</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
                       </select>
                     </div>
 
@@ -187,11 +216,10 @@ export default function FimDashboard() {
                   <div className="flex items-center self-end md:self-center">
                     <button
                       onClick={() => setIsLive(!isLive)}
-                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${
-                        isLive 
-                          ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]" 
-                          : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${isLive
+                        ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
+                        : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
+                        }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
                       {isLive ? "LIVE: ON" : "LIVE: OFF"}
@@ -220,37 +248,36 @@ export default function FimDashboard() {
                             <tr key={log.id} className="hover:bg-[#121212] transition-colors group">
                               <td className="py-3 px-4">
                                 <span className="bg-[#1B263B]/30 border border-blue-900/50 px-2 py-0.5 text-yellow-300 font-bold">
-                                  {log.agent_id}
+                                  {getAgentName(log.agent_id)}
                                 </span>
                               </td>
-                              
+
                               <td className="py-3 px-4 text-white font-semibold group-hover:text-blue-400 transition-colors truncate max-w-xs" title={log.file_path}>
                                 {log.file_path}
                               </td>
-                              
+
                               <td className="py-3 px-4">
-                                <span className={`text-md font-bold px-2 py-0.5 border ${
-                                  log.event_type === 'MODIFIED' ? 'bg-orange-950/40 text-orange-400 border border-orange-900/40' :
+                                <span className={`text-md font-bold px-2 py-0.5 border ${log.event_type === 'MODIFIED' ? 'bg-orange-950/40 text-orange-400 border border-orange-900/40' :
                                   log.event_type === 'DELETED' ? 'bg-red-950/40 text-red-400 border border-red-900/40' :
-                                  'bg-green-950/40 text-green-400 border border-green-900/40'
-                                }`}>
+                                    'bg-green-950/40 text-green-400 border border-green-900/40'
+                                  }`}>
                                   {log.event_type}
                                 </span>
                               </td>
-                     
+
                               <td className="py-3 px-4 text-gray-400">
-                                {new Date(log.timestamp).toLocaleString("vi-VN", { timeZone: "UTC" })}
-                              </td>
-                              
-                              <td className="py-3 px-4 text-gray-400">
-                                {log.size?.toLocaleString() || '0'}
+                                {log.timestamp ? new Date(log.timestamp).toLocaleString("vi-VN") : "-"}
                               </td>
 
                               <td className="py-3 px-4 text-gray-400">
-                                {log.uid}
+                                {(log.size ?? log._size)?.toLocaleString() || '-'}
+                              </td>
+
+                              <td className="py-3 px-4 text-gray-400">
+                                {log.uid || log._uid || '-'}
                               </td>
                               <td className="py-3 px-4 text-gray-400">
-                                {log.gid}
+                                {log.gid || '-'}
                               </td>
                               <td className="py-3 px-4">
                                 {log.permission ? (
@@ -267,7 +294,7 @@ export default function FimDashboard() {
                           <tr>
                             <td colSpan="7" className="py-16 h-30 text-center text-red-400 uppercase font-bold tracking-widest text-md">
                               <div className="flex items-center justify-center gap-2">
-                                <CircleAlert size={16} /> 
+                                <CircleAlert size={16} />
                                 No integrity logs matching filters found
                               </div>
                             </td>

@@ -4,14 +4,14 @@
 import crypto from 'crypto'
 import pool from '../../shared/database/connect.js'
 import { GCMencrypt, GCMdecrypt } from '../../shared/utils/cryptoUtils.js';
-import { ZipArchive } from 'archiver';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import util from 'util';
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const archiver = require('archiver');
+const execAsync = util.promisify(exec);
+
 
 const dashController = {
 	// Tạo agent mới, gắn user_id từ JWT
@@ -110,40 +110,57 @@ const dashController = {
 				lb_url: process.env.LOAD_BALANCER_URL || 'http://localhost:3001'
 			};
 
-			// 1. Cấu hình luồng nén ZIP trực tiếp trên RAM
-			const archive = new ZipArchive({ zlib: { level: 9 } });
-
-			res.setHeader('Content-Type', 'application/zip');
-			res.setHeader('Content-Disposition', `attachment; filename="siem-agent-${agent_id}.zip"`);
-
-			archive.on('error', function (err) {
-				console.error('Lỗi khi nén file ZIP: ', err);
-				res.status(500).send({ error: err.message });
-			});
-
-			// Gắn luồng nén vào response
-			archive.pipe(res);
-
-			// 2. Thêm file JSON Config sinh ra từ RAM vào file ZIP
-			archive.append(JSON.stringify(config, null, 2), { name: 'agent_config.json' });
-
-			// 3. Đọc file .deb tĩnh và nhét vào file ZIP
+			// Cấu hình đường dẫn
 			const __filename = fileURLToPath(import.meta.url);
 			const __dirname = path.dirname(__filename);
-			const debFilePath = path.join(__dirname, '../download/siem-agent_1.0.0_amd64.deb');
+			const templateDir = path.join(__dirname, '../../../agents/siem-agent_1.0.0_amd64');
 
-			if (fs.existsSync(debFilePath)) {
-				archive.file(debFilePath, { name: 'siem-agent_1.0.0_amd64.deb' });
-			} else {
-				console.warn('Cảnh báo: Không tìm thấy file .deb tại', debFilePath);
-			}
+			const tmpBuildDir = `/tmp/siem-agent-${agent_id}`;
+			const tmpDebFile = `/tmp/siem-agent-${agent_id}.deb`;
 
-			// Hoàn tất đóng gói ZIP và gửi về Client
-			await archive.finalize();
+			// 1. Copy thư mục template sang /tmp
+			await execAsync(`rm -rf ${tmpBuildDir} ${tmpDebFile}`);
+			await execAsync(`cp -r ${templateDir} ${tmpBuildDir}`);
+
+			// 2. Ghi file agent_config.json vào đúng thư mục /opt/siem-agent/ của package
+			const configPath = path.join(tmpBuildDir, 'opt/siem-agent/agent_config.json');
+			fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+			// 3. Phân quyền bảo mật 600 cho file config (Chỉ root mới được đọc)
+			await execAsync(`chmod 600 ${configPath}`);
+
+			// Đảm bảo permissions chuẩn cho thư mục DEBIAN
+			await execAsync(`chmod 755 ${tmpBuildDir}/DEBIAN`);
+			await execAsync(`chmod 755 ${tmpBuildDir}/DEBIAN/postinst`);
+			await execAsync(`chmod 755 ${tmpBuildDir}/DEBIAN/prerm`);
+
+			// Đảm bảo cấp quyền thực thi cho các file nhị phân và script
+			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/start.sh`);
+			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/*Collector`);
+			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/ebpf/tools/ecli`).catch(() => { });
+
+			// 4. Build lại file .deb
+			await execAsync(`dpkg-deb --root-owner-group --build ${tmpBuildDir} ${tmpDebFile}`);
+
+			// 5. Trả file .deb về cho Client
+			res.setHeader('Content-Type', 'application/vnd.debian.binary-package');
+			res.setHeader('Content-Disposition', `attachment; filename="siem-agent-${agent_id}.deb"`);
+
+			const fileStream = fs.createReadStream(tmpDebFile);
+			fileStream.pipe(res);
+
+			// 6. Xoá file rác sau khi gửi xong
+			fileStream.on('end', () => {
+				execAsync(`rm -rf ${tmpBuildDir} ${tmpDebFile}`).catch(console.error);
+			});
 		}
 		catch (err) {
-			console.error('Lỗi khi tạo config download: ', err);
-			res.status(500).json({ message: 'Lỗi server', error: err.message, stack: err.stack });
+			console.error('=== LỖI DOWNLOAD AGENT CONFIG ===');
+			console.error('Agent ID:', req.params.agent_id);
+			console.error('Error message:', err.message);
+			console.error('Error stack:', err.stack);
+			console.error('=================================');
+			res.status(500).json({ message: 'Lỗi server', error: err.message });
 		}
 	}
 };

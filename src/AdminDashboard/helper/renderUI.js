@@ -1,16 +1,16 @@
-import { Check, ChevronRight } from "lucide-react"; 
+import { Check, ChevronRight } from "lucide-react";
 
 export const SidebarIcon = ({ icon, active = false, onClick, title }) => {
   return (
-    <div 
-      className={`relative group p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-white hover:text-white hover:bg-[#1A1A1A]'}`}
+    <div
+      className={`flex items-center space-x-3 w-full p-2.5 rounded cursor-pointer transition-colors ${active ? 'bg-[#1D2B3F] text-blue-400' : 'text-white hover:text-white hover:bg-[#1A1A1A]'}`}
       onClick={onClick}>
-        {icon}
-        {title && (
-          <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0D0D0D] font-mono font-bold tracking-widest text-blue-400 text-xs whitespace-nowrap rounded-none opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 border border-[#2A2A2A] shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-            {title}
-          </span>
-        )}
+      <div className="flex-shrink-0">{icon}</div>
+      {title && (
+        <span className="font-mono font-bold tracking-wider text-xs whitespace-nowrap uppercase">
+          {title}
+        </span>
+      )}
     </div>
   );
 }
@@ -33,14 +33,13 @@ export const CustomCheckbox = ({ checked, onChange, label, linkText, endText }) 
   return (
     <div className="flex items-center space-x-3 group">
       <button onClick={() => onChange(!checked)}
-        className={`relative flex-shrink-0 w-5 h-5 border-2 rounded-sm transition-all duration-200 ${
-          checked 
-            ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/50' 
+        className={`relative flex-shrink-0 w-5 h-5 border-2 rounded-sm transition-all duration-200 ${checked
+            ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/50'
             : 'border-blue-500/40 hover:border-blue-500/70'
-        }`}
+          }`}
         type="button"
       >
-        {checked && (<Check size={16} className="absolute inset-0 m-auto text-white animate-pulse" strokeWidth={3}/>)}
+        {checked && (<Check size={16} className="absolute inset-0 m-auto text-white animate-pulse" strokeWidth={3} />)}
       </button>
       <label className="text-xs text-gray-400 leading-relaxed select-none cursor-pointer group-hover:text-gray-300 transition-colors whitespace-nowrap">
         {label} <span className="text-blue-400 hover:text-blue-300 cursor-pointer">{linkText}</span> {endText}
@@ -51,13 +50,12 @@ export const CustomCheckbox = ({ checked, onChange, label, linkText, endText }) 
 
 export const TabItem = ({ active, onClick, icon, label }) => {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className={`flex items-center space-x-2 px-4 py-1 rounded transition-all text-base font-bold uppercase tracking-tight ${
-        active 
-          ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+      className={`flex items-center space-x-2 px-4 py-1 rounded transition-all text-base font-bold uppercase tracking-tight ${active
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
           : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-      }`}
+        }`}
     >{icon}<span>{label}</span>
     </button>
   );
@@ -107,8 +105,8 @@ export const InputField = ({ label, placeholder, icon, type = "text", value, onC
       </div>
       <div className="relative">
         {icon && (<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500/20 group-focus-within:text-blue-500 transition-colors">{icon}</div>)}
-        <input 
-          type={type} 
+        <input
+          type={type}
           placeholder={placeholder}
           className={`w-full bg-black/50 border border-blue-500/40 hover:border-blue-500/40 focus:border-blue-500 focus:bg-blue-500/5 transition-all text-sm py-3.5 ${icon ? 'pl-11' : 'px-4'} pr-4 text-blue-100 placeholder:text-blue-900/30 focus:outline-none focus:ring-1 focus:ring-blue-500/10 rounded-none`}
           required
@@ -134,18 +132,18 @@ export const HackerButton = ({ icon, label }) => {
 }
 
 export const RenderUIPattern = () => {
-    return (
-        <div className="absolute top-10 right-10 text-blue-500/10 text-[9px] select-none pointer-events-none text-right hidden lg:block leading-relaxed">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="hover:text-blue-500/40 transition-colors uppercase">
-            {`>> [${new Date().toISOString().split('T')[1].split('.')[0]}] NET_TRACE: #00${i} -- ADDR_0x${Math.random().toString(16).slice(2, 6)} -- OK`}
-          </div>
-        ))}
-      </div>
-    )
+  return (
+    <div className="absolute top-10 right-10 text-blue-500/10 text-[9px] select-none pointer-events-none text-right hidden lg:block leading-relaxed">
+      {Array.from({ length: 20 }).map((_, i) => (
+        <div key={i} className="hover:text-blue-500/40 transition-colors uppercase">
+          {`>> [${new Date().toISOString().split('T')[1].split('.')[0]}] NET_TRACE: #00${i} -- ADDR_0x${Math.random().toString(16).slice(2, 6)} -- OK`}
+        </div>
+      ))}
+    </div>
+  )
 }
 
-export const CompactRow = ({ label, value}) => {
+export const CompactRow = ({ label, value }) => {
   return (
     <div className="font-mono space-y-1 group flex flex-row gap-x-5 items-center">
       <div className="flex items-center space-x-2 text-gray-500 group-hover:text-blue-400 transition-colors">

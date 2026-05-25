@@ -6,6 +6,7 @@ export const useDashboardSocket = () => {
     const [logs, setLogs] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [agentStatuses, setAgentStatuses] = useState({});
+    const [dbLogs, setDbLogs] = useState([]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -17,10 +18,25 @@ export const useDashboardSocket = () => {
         try {
             const url = new URL(masterUrl);
             wsUrl = `ws://${url.hostname}:6001`;
-        } catch (e) {}
+        } catch (e) { }
 
         let ws = null;
         let reconnectTimer = null;
+        let logsBuffer = [];
+        let alertsBuffer = [];
+
+        const flushInterval = setInterval(() => {
+            if (logsBuffer.length > 0) {
+                const logsToAppend = [...logsBuffer];
+                logsBuffer = [];
+                setLogs(prev => [...logsToAppend, ...prev].slice(0, 1000));
+            }
+            if (alertsBuffer.length > 0) {
+                const alertsToAppend = [...alertsBuffer];
+                alertsBuffer = [];
+                setAlerts(prev => [...alertsToAppend, ...prev].slice(0, 500));
+            }
+        }, 500);
 
         const connect = () => {
             ws = new WebSocket(wsUrl);
@@ -34,35 +50,31 @@ export const useDashboardSocket = () => {
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    
+
                     if (data.type === 'WELCOME') {
                         setIsConnected(true);
                     }
-                    
+
                     if (data.type === 'NEW_LOG_UI') {
-                        setLogs(prev => {
-                            const newLog = {
-                                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                                agent_id: data.agent_id,
-                                ...data.payload,
-                                timestamp: data.time || data.payload.timestamp || new Date().toISOString()
-                            };
-                            return [newLog, ...prev].slice(0, 500); // Lưu tối đa 500 bản ghi mới nhất
-                        });
+                        const newLog = {
+                            id: Date.now() + Math.random().toString(36).substr(2, 9),
+                            agent_id: data.agent_id,
+                            ...data.payload,
+                            timestamp: data.time || data.payload.timestamp || new Date().toISOString()
+                        };
+                        logsBuffer.unshift(newLog); // Thêm vào buffer
                     }
 
                     if (data.type === 'NEW_ALERT_UI') {
-                        setAlerts(prev => {
-                            const newAlert = {
-                                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                                agent_id: data.agent_id,
-                                ...data.payload, // payload thường chứa rule_name, severity
-                                timestamp: data.time || new Date().toISOString()
-                            };
-                            return [newAlert, ...prev].slice(0, 100);
-                        });
+                        const newAlert = {
+                            id: Date.now() + Math.random().toString(36).substr(2, 9),
+                            agent_id: data.agent_id,
+                            ...data.payload, // payload thường chứa rule_name, severity
+                            timestamp: data.time || new Date().toISOString()
+                        };
+                        alertsBuffer.unshift(newAlert); // Thêm vào buffer
                     }
-                    
+
                     if (data.type === 'AGENT_STATUS_UPDATE') {
                         setAgentStatuses(prev => ({
                             ...prev,
@@ -71,6 +83,13 @@ export const useDashboardSocket = () => {
                                 last_active: data.last_active
                             }
                         }));
+                    }
+
+                    if (data.type === 'FIM_LOGS_RESPONSE' ||
+                        data.type === 'NETPRO_LOGS_RESPONSE' ||
+                        data.type === 'SYSLOGS_RESPONSE' ||
+                        data.type === 'APPLICATIONS_RESPONSE') {
+                        setDbLogs(data.payload || []);
                     }
                 } catch (err) {
                     console.error("[WS] Lỗi parse message:", err);
@@ -86,9 +105,9 @@ export const useDashboardSocket = () => {
                     connect();
                 }, 3000);
             };
-            
+
             ws.onerror = (err) => {
-                console.error("[WS] Error:", err);
+                console.warn("[WS] Error occurred (expected during page transition or reconnect):", err);
                 ws.close(); // Force close to trigger onclose and reconnect
             };
 
@@ -98,6 +117,7 @@ export const useDashboardSocket = () => {
         connect();
 
         return () => {
+            clearInterval(flushInterval);
             clearTimeout(reconnectTimer);
             if (ws) {
                 ws.onclose = null; // Prevent triggering reconnect when unmounting
@@ -109,7 +129,16 @@ export const useDashboardSocket = () => {
     const clearData = useCallback(() => {
         setLogs([]);
         setAlerts([]);
+        setDbLogs([]);
     }, []);
 
-    return { socket, isConnected, logs, alerts, agentStatuses, clearData };
+    const fetchDbLogsViaSocket = useCallback((type, agentId, timeRange) => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type, agent_id: agentId, timeRange }));
+        } else {
+            console.warn("[WS] Socket not open, cannot fetch DB logs:", type, agentId);
+        }
+    }, [socket]);
+
+    return { socket, isConnected, logs, alerts, agentStatuses, clearData, dbLogs, setDbLogs, fetchDbLogsViaSocket };
 };

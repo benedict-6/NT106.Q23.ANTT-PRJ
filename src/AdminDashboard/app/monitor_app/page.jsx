@@ -11,7 +11,7 @@ import { AppStore } from '../../helper/icons.jsx';
 import { useDashboardSocket } from '../../hooks/useDashboardSocket.js';
 
 const ApplicationsPage = () => {
-  const { logs: socketLogs, isConnected } = useDashboardSocket();
+  const { logs: socketLogs, isConnected, dbLogs, setDbLogs, fetchDbLogsViaSocket } = useDashboardSocket();
   const [agents, setAgents] = useState([]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const ApplicationsPage = () => {
   const uniqueAgentList = useMemo(() => {
     const listFromLogs = [...new Set(displayedApps.map(app => app.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-    return [...new Set([...listFromApi, ...listFromLogs])].slice(0, 3);
+    return [...new Set([...listFromApi, ...listFromLogs])];
   }, [agents, displayedApps]);
 
   const [agentId, setAgentId] = useState("");
@@ -51,51 +51,93 @@ const ApplicationsPage = () => {
   }, [uniqueAgentList, agentId]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState("90"); 
+  const [timeRange, setTimeRange] = useState("24h");
   const [isLive, setIsLive] = useState(true);
   const [sortOrder, setSortOrder] = useState("asc");
+
+  // Gửi request lấy historical db applications khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
+  useEffect(() => {
+    if (agentId && isConnected) {
+      setDbLogs([]); // Clear old state
+      fetchDbLogsViaSocket('FETCH_APPLICATIONS', agentId, isLive ? undefined : timeRange);
+    }
+  }, [agentId, isConnected, isLive, timeRange, fetchDbLogsViaSocket, setDbLogs]);
+
+  // Hợp nhất socketLogs (realtime) với dbLogs (historical) và lọc trùng
+  const combinedApps = useMemo(() => {
+    const liveAppsMapped = socketLogs.filter(log => log.type === 'software_list').map(log => ({
+      id: log.id,
+      agent_id: log.agent_id,
+      name: log.name || log.software_name || 'Unknown',
+      version: log.version || log._version || 'Unknown',
+      last_time_pull: log.timestamp || new Date().toISOString(),
+      cves: log.cves || []
+    }));
+
+    const dbAppsMapped = dbLogs.map(log => ({
+      id: log.id || log.app_id,
+      agent_id: log.agent_id,
+      name: log.software_name || 'Unknown',
+      version: log._version || 'Unknown',
+      last_time_pull: log._timestamp || new Date().toISOString(),
+      cves: log.cves || []
+    }));
+
+    const merged = [...liveAppsMapped];
+    const liveNames = new Set(liveAppsMapped.map(app => app.name.toLowerCase()));
+
+    dbAppsMapped.forEach(app => {
+      if (!liveNames.has(app.name.toLowerCase())) {
+        merged.push(app);
+      }
+    });
+
+    return merged;
+  }, [socketLogs, dbLogs]);
+
+  useEffect(() => {
+    if (isLive) {
+      setDisplayedApps(combinedApps);
+    } else {
+      const dbAppsMapped = dbLogs.map(log => ({
+        id: log.id || log.app_id,
+        agent_id: log.agent_id,
+        name: log.software_name || 'Unknown',
+        version: log._version || 'Unknown',
+        last_time_pull: log._timestamp || new Date().toISOString(),
+        cves: log.cves || []
+      }));
+      setDisplayedApps(dbAppsMapped);
+    }
+  }, [combinedApps, dbLogs, isLive]);
 
   const handleCycleAgent = (direction) => {
     const currentIndex = uniqueAgentList.indexOf(agentId);
     if (currentIndex === -1) return;
-    
+
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    
+
     if (nextIndex >= uniqueAgentList.length) nextIndex = 0;
     if (nextIndex < 0) nextIndex = uniqueAgentList.length - 1;
-    
+
     setAgentId(uniqueAgentList[nextIndex]);
   };
 
-  useEffect(() => {
-    if (!isLive) return;
-    setDisplayedApps(socketLogs.filter(log => log.type === 'software_list').map(log => ({
-        id: log.id,
-        agent_id: log.agent_id,
-        name: log.name || log.software_name || 'Unknown',
-        version: log.version || log._version || 'Unknown',
-        last_time_pull: log.timestamp,
-        cves: log.cves || []
-      })));
-  }, [isLive, socketLogs]);
+  const getAgentName = (id) => {
+    const agent = agents.find(a => a.agent_id === id);
+    return agent ? agent.hostname : id;
+  };
 
   const filteredAndSortedData = useMemo(() => {
     return displayedApps.filter((app) => {
       if (app.agent_id !== agentId) return false;
       if (searchQuery && !app.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-
-      const pullDate = new Date(app.last_time_pull).getTime();
-      const diffTime = Math.abs(Date.now() - pullDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (timeRange !== "ALL" && diffDays > parseInt(timeRange)) return false;
-
       return true;
     }).sort((a, b) => {
       if (sortOrder === "asc") return a.name.localeCompare(b.name);
       return b.name.localeCompare(a.name);
     });
-  }, [displayedApps, agentId, searchQuery, timeRange, sortOrder]);
+  }, [displayedApps, agentId, searchQuery, sortOrder]);
 
   const customScrollbarClasses = `
     [&::-webkit-scrollbar]:w-2 
@@ -114,14 +156,14 @@ const ApplicationsPage = () => {
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <AppHeader route={'security/apps'} />
- 
+
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none overflow-hidden z-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/5 rounded-full blur-[160px]" />
           <div className="scanline opacity-10" />
         </div>
 
         <div className={`flex-1 overflow-y-auto p-6 relative z-10 w-full ${customScrollbarClasses}`}>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
@@ -130,7 +172,7 @@ const ApplicationsPage = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-none mb-4 gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded-full">
-                  <AppStore/>
+                  <AppStore />
                 </div>
                 <div>
                   <h3 className="text-md font-bold font-mono uppercase tracking-widest text-gray-400">Apps {isConnected ? <span className="text-green-500 text-xs ml-2">● CONNECTED</span> : <span className="text-red-500 text-xs ml-2">● DISCONNECTED</span>}</h3>
@@ -151,13 +193,12 @@ const ApplicationsPage = () => {
                     <button
                       key={id}
                       onClick={() => setAgentId(id)}
-                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${
-                        agentId === id
-                          ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                          : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
-                      }`}
+                      className={`px-4 py-1.5 font-mono text-md font-bold transition-all duration-300 rounded-none uppercase ${agentId === id
+                        ? "bg-blue-600 text-white border-b-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                        : "bg-transparent text-gray-500 border border-transparent hover:text-gray-300 hover:bg-[#111]"
+                        }`}
                     >
-                      {id}
+                      {getAgentName(id)}
                     </button>
                   ))}
                 </div>
@@ -176,22 +217,25 @@ const ApplicationsPage = () => {
               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
               <div className="absolute top-0 right-0 w-2 h-8 bg-blue-500/10" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-500/40 group-hover:border-blue-500 transition-colors duration-500" />
-              
+
               <div className="bg-[#111] p-6 border border-[#232323] space-y-6">
-                
+
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4">
                   <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                    
+
                     <div className="flex flex-col gap-2">
                       <span className="text-md font-bold tracking-widest text-blue-500 uppercase font-mono">Time Interval</span>
                       <select
                         value={timeRange}
                         onChange={(e) => setTimeRange(e.target.value)}
-                        className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
+                        disabled={isLive}
+                        className={`bg-[#0A0A0A] border border-[#2A2A2A] rounded-none px-3 py-1.5 text-md text-gray-300 font-mono focus:outline-none focus:border-blue-500 cursor-pointer ${isLive ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <option value="90">&gt; Last 90D</option>
-                        <option value="30">&gt; Last 30D</option>
-                        <option value="ALL">ALL</option>
+                        <option value="1m">Last 1 minute</option>
+                        <option value="30m">Last 30 minutes</option>
+                        <option value="24h">Last 24 hours</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
                       </select>
                     </div>
 
@@ -210,11 +254,10 @@ const ApplicationsPage = () => {
                   <div className="flex items-center self-end md:self-center">
                     <button
                       onClick={() => setIsLive(!isLive)}
-                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${
-                        isLive 
-                          ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]" 
-                          : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${isLive
+                        ? "bg-green-950/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.15)]"
+                        : "bg-[#0A0A0A] border-[#2A2A2A] text-red-400"
+                        }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-red-500"}`} />
                       {isLive ? "LIVE: ON" : "LIVE: OFF"}
@@ -231,7 +274,7 @@ const ApplicationsPage = () => {
                           <th className="py-3 px-4 w-60 cursor-pointer hover:bg-[#1c1c1c] transition-colors" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
                             <div className="flex items-center gap-2">
                               App name
-                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18}/> : <ArrowUp01 size={18}/>}</span>
+                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowDown01 size={18} /> : <ArrowUp01 size={18} />}</span>
                             </div>
                           </th>
                           <th className="py-3 px-4 w-20">Version</th>
@@ -245,22 +288,22 @@ const ApplicationsPage = () => {
                             <tr key={app.id} className="hover:bg-[#121212] transition-colors group">
                               <td className="py-3 px-4">
                                 <span className="bg-[#1B263B]/30 border border-blue-900/50 px-2 py-0.5 text-md text-yellow-300 font-bold">
-                                  {app.agent_id}
+                                  {getAgentName(app.agent_id)}
                                 </span>
                               </td>
-                              
+
                               <td className="py-3 px-4 text-white font-semibold group-hover:text-blue-400 transition-colors">
                                 {app.name}
                               </td>
-                              
+
                               <td className="py-3 px-4 text-white">
                                 {app.version}
                               </td>
-                     
+
                               <td className="py-3 px-4 text-white">
                                 {new Date(app.last_time_pull).toLocaleString("vi-VN", { timeZone: "UTC" })}
                               </td>
-                              
+
                               <td className="py-3 px-4 text-left">
                                 {app.cves.length > 0 ? (
                                   <div className="flex flex-wrap justify-start gap-2">
@@ -285,7 +328,7 @@ const ApplicationsPage = () => {
                           <tr>
                             <td colSpan="5" className="py-16 h-30 text-center text-red-400 uppercase font-bold tracking-widest text-md">
                               <div className="flex items-center justify-center gap-2">
-                                <CircleAlert size={16} /> 
+                                <CircleAlert size={16} />
                                 Oops, no apps found
                               </div>
                             </td>
@@ -295,10 +338,10 @@ const ApplicationsPage = () => {
                     </table>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center text-md font-mono text-gray-600 uppercase tracking-wider pt-2">
                   <div>
-                    Found: <span className="text-blue-400">{filteredAndSortedData.length}</span> result{filteredAndSortedData.length > 1? "s" : ""}
+                    Found: <span className="text-blue-400">{filteredAndSortedData.length}</span> result{filteredAndSortedData.length > 1 ? "s" : ""}
                   </div>
                 </div>
 

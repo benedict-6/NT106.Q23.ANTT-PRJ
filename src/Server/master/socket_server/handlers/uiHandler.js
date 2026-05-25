@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
-import { getDashboardOverview } from '../services/dashboardService.js';
+import { getDashboardOverview, getFimLogs, getNetProLogs, getSyslogs, getApplications } from '../services/dashboardService.js';
 
 // Danh bạ lưu các kết nối UI đang sống (Active UIs)
 export const activeUIs = new Set();
@@ -61,6 +61,54 @@ export default function UIHandler(port) {
                         }));
                     } catch (err) {
                         ws.send(JSON.stringify({ type: 'ERROR', message: 'Lỗi khi tải dữ liệu thống kê từ DB.' }));
+                    }
+                    return;
+                }
+
+                // UI YÊU CẦU LẤY LOGS FIM
+                if (data.type === 'FETCH_FIM_LOGS') {
+                    if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
+                    try {
+                        const logs = await getFimLogs(data.agent_id, data.timeRange);
+                        ws.send(JSON.stringify({ type: 'FIM_LOGS_RESPONSE', payload: logs }));
+                    } catch (err) {
+                        ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
+                    }
+                    return;
+                }
+
+                // UI YÊU CẦU LẤY LOGS NETPRO
+                if (data.type === 'FETCH_NETPRO_LOGS') {
+                    if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
+                    try {
+                        const logs = await getNetProLogs(data.agent_id, data.timeRange);
+                        ws.send(JSON.stringify({ type: 'NETPRO_LOGS_RESPONSE', payload: logs }));
+                    } catch (err) {
+                        ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
+                    }
+                    return;
+                }
+
+                // UI YÊU CẦU LẤY LOGS SYSTEM/SYSLOG
+                if (data.type === 'FETCH_SYSLOGS') {
+                    if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
+                    try {
+                        const logs = await getSyslogs(data.agent_id, data.timeRange);
+                        ws.send(JSON.stringify({ type: 'SYSLOGS_RESPONSE', payload: logs }));
+                    } catch (err) {
+                        ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
+                    }
+                    return;
+                }
+
+                // UI YÊU CẦU LẤY ỨNG DỤNG/SOFTWARE INVENTORY
+                if (data.type === 'FETCH_APPLICATIONS') {
+                    if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
+                    try {
+                        const apps = await getApplications(data.agent_id, data.timeRange);
+                        ws.send(JSON.stringify({ type: 'APPLICATIONS_RESPONSE', payload: apps }));
+                    } catch (err) {
+                        ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
                     }
                     return;
                 }

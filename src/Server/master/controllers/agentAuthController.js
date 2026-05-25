@@ -28,7 +28,7 @@ const agentController = {
             }
 
             const result = await pool.query(
-                "SELECT * FROM agents WHERE agent_id = $1 AND agent_status = 'Active'",
+                "SELECT * FROM agents WHERE agent_id = $1",
                 [agent_id]
             );
             const agent = result.rows[0];
@@ -65,7 +65,7 @@ const agentController = {
             // Lưu Session Token vào DB + cập nhật trạng thái online
             await pool.query(
                 `UPDATE agents SET current_session = $1, last_active = NOW(), 
-                 hostname = $3, mac_address = $4
+                 hostname = COALESCE(hostname, $3), mac_address = $4, agent_status = 'online'
                  WHERE agent_id = $2`,
                 [sessionToken, agent_id, req.body.hostname || null, mac_address || null]
             );

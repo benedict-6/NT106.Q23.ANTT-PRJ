@@ -1,12 +1,7 @@
 // ---> TẤT CẢ LOGIC CỦA WORKER NODE
 // Hứng data: TCP/UDP server hoặc HTTP server nhận log từ Load balancer
-import { parseAgentData } from "../engine/parser.js";
-import { evaluateData } from "../engine/ruleMatcher.js";
 import { decryptAgentPayload } from "../engine/decodedRawData.js";
 import { handleAgentFimReport, handleAgentNetProReport, handleAgentLogReport, handleAgentSoftwareReport } from "../engine/handleAgentRule.js";
-import { writeLogToDB } from "../actions/dbWriter.js";
-import pool from "../../shared/database/connect.js";
-import { GCMdecrypt } from "../../shared/utils/cryptoUtils.js";
 
 export default async function receiver(req, res) {
     try {
@@ -17,32 +12,40 @@ export default async function receiver(req, res) {
             return res.status(401).json({ message: 'Từ chối truy cập! Không xác định được Agent.' });
         }
 
-        // Giải nén dữ liệu Gzip từ agent
+        // Express đã tự giải nén gzip nhờ Content-Encoding header
         const buffer = Buffer.isBuffer(req.body) ? req.body : req.body.data;
-        const decodedData = decryptAgentPayload(buffer);
+        const records = decryptAgentPayload(buffer);
 
-        if (!decodedData) {
+        if (!records) {
             return res.status(400).json({ message: 'Lỗi giải nén dữ liệu.' });
         }
-        else {
-            res.status(200).json({ message: 'Giải nén dữ liệu thành công.' });
-        }
 
+        // Trả về 200 OK cho Agent ngay lập tức để không block kết nối
+        res.status(200).json({ message: 'Giải nén dữ liệu thành công.' });
 
-        if (decodedData.body.type === 'file_integrity') {
-            await handleAgentFimReport(decodedData, agent_id);
-        }
-        else if (decodedData.body.type === 'log_monitoring') {
-            await handleAgentLogReport(decodedData, agent_id);
-        }
-        else if (decodedData.body.type === 'net_pro') {
-            await handleAgentNetProReport(decodedData, agent_id);
-        }
-        else if (decodedData.body.type === 'software_list') {
-            await handleAgentSoftwareReport(decodedData, agent_id);
-        }
-        else
-            return res.status(400).json({ message: 'Không có loại dữ liệu hợp lệ.' });
+        // Xử lý không đồng bộ các bản ghi trong batch
+        (async () => {
+            for (const record of records) {
+                const decodedData = { body: record };
+
+                try {
+                    if (decodedData.body.type === 'file_integrity') {
+                        await handleAgentFimReport(decodedData, agent_id);
+                    }
+                    else if (decodedData.body.type === 'log_monitoring') {
+                        await handleAgentLogReport(decodedData, agent_id);
+                    }
+                    else if (decodedData.body.type === 'net_pro') {
+                        await handleAgentNetProReport(decodedData, agent_id);
+                    }
+                    else if (decodedData.body.type === 'software_list') {
+                        await handleAgentSoftwareReport(decodedData, agent_id);
+                    }
+                } catch (err) {
+                    console.error('Lỗi khi xử lý bản ghi agent:', err);
+                }
+            }
+        })();
 
     }
     catch (err) {
