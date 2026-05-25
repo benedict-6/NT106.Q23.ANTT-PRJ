@@ -73,6 +73,11 @@ export const useDashboardSocket = () => {
                             timestamp: data.time || new Date().toISOString()
                         };
                         alertsBuffer.unshift(newAlert); // Thêm vào buffer
+                        
+                        // Dispatch custom event for AppHeader to catch real-time alerts
+                        if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('NEW_SIEM_ALERT', { detail: newAlert }));
+                        }
                     }
 
                     if (data.type === 'AGENT_STATUS_UPDATE') {
@@ -85,7 +90,6 @@ export const useDashboardSocket = () => {
                         }));
                     }
 
-<<<<<<< HEAD
                     if (data.type === 'AGENTS_DISCONNECTED') {
                         setAgentStatuses(prev => {
                             const newStatuses = { ...prev };
@@ -98,9 +102,6 @@ export const useDashboardSocket = () => {
                             return newStatuses;
                         });
                     }
-
-=======
->>>>>>> main
                     if (data.type === 'FIM_LOGS_RESPONSE' ||
                         data.type === 'NETPRO_LOGS_RESPONSE' ||
                         data.type === 'SYSLOGS_RESPONSE' ||

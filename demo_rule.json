@@ -8,10 +8,19 @@
       "category": "network",
       "type": "net_pro",
       "conditions": [
-        { "field": "dport", "operator": "in", "value": [4444, 1337, 5555, 6666, 9999] }
+        {
+          "field": "dport",
+          "operator": "in",
+          "value": [
+            4444,
+            1337,
+            5555,
+            6666,
+            9999
+          ]
+        }
       ]
     },
-
     {
       "rule_id": "1002",
       "rule_name": "Connection to blacklisted IP",
@@ -20,10 +29,13 @@
       "category": "network",
       "type": "net_pro",
       "conditions": [
-        { "field": "daddr", "operator": "in_blacklist", "value": null }
+        {
+          "field": "daddr",
+          "operator": "in_blacklist",
+          "value": null
+        }
       ]
     },
-
     {
       "rule_id": "1003",
       "rule_name": "External connection from monitored host",
@@ -32,23 +44,37 @@
       "category": "network",
       "type": "net_pro",
       "conditions": [
-        { "field": "daddr", "operator": "is_external", "value": true }
+        {
+          "field": "daddr",
+          "operator": "is_external",
+          "value": true
+        }
       ]
     },
-
     {
       "rule_id": "2001",
-      "rule_name": "Suspicious shell spawned",
+      "rule_name": "Suspicious network shell spawned (nc/netcat)",
       "enabled": true,
       "packet_level": 15,
       "category": "process",
       "type": "net_pro",
       "conditions": [
-        { "field": "comm", "operator": "in", "value": ["bash", "sh", "zsh"] }
+        {
+          "field": "comm",
+          "operator": "in",
+          "value": [
+            "nc",
+            "netcat",
+            "ncat"
+          ]
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "PROC_EXEC"
+        }
       ]
- 
     },
-
     {
       "rule_id": "2002",
       "rule_name": "Process executed from temporary directory",
@@ -57,10 +83,13 @@
       "category": "process",
       "type": "net_pro",
       "conditions": [
-        { "field": "filename", "operator": "regex", "value": "\\/(tmp|var\\/tmp)\\/" }
+        {
+          "field": "filename",
+          "operator": "regex",
+          "value": "\\/(tmp|var\\/tmp)\\/"
+        }
       ]
     },
-
     {
       "rule_id": "2003",
       "rule_name": "High privilege process making external connection",
@@ -69,11 +98,20 @@
       "category": "combo",
       "type": "net_pro",
       "conditions": [
-        { "field": "uid", "operator": "in", "value": [0] },
-        { "field": "daddr", "operator": "is_external", "value": true }
+        {
+          "field": "uid",
+          "operator": "in",
+          "value": [
+            0
+          ]
+        },
+        {
+          "field": "daddr",
+          "operator": "is_external",
+          "value": true
+        }
       ]
     },
-
     {
       "rule_id": "3001",
       "rule_name": "Port scanning detection",
@@ -82,15 +120,25 @@
       "category": "network",
       "type": "net_pro",
       "conditions": [
-        { "field": "protocol", "operator": "equals", "value": 6 }
+        {
+          "field": "protocol",
+          "operator": "equals",
+          "value": "TCP"
+        },
+        {
+          "field": "state",
+          "operator": "equals",
+          "value": "SYN_SENT"
+        }
       ],
       "threshold": {
         "count": 20,
         "window_seconds": 30,
-        "group_by": ["saddr"]
+        "group_by": [
+          "saddr"
+        ]
       }
     },
-
     {
       "rule_id": "3002",
       "rule_name": "Brute force connection attempt",
@@ -99,15 +147,26 @@
       "category": "network",
       "type": "net_pro",
       "conditions": [
-        { "field": "protocol", "operator": "equals", "value": 6 }
+        {
+          "field": "protocol",
+          "operator": "equals",
+          "value": "TCP"
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "TCP_CONNECT"
+        }
       ],
       "threshold": {
         "count": 10,
         "window_seconds": 60,
-        "group_by": ["saddr", "dport"]
+        "group_by": [
+          "saddr",
+          "dport"
+        ]
       }
     },
-
     {
       "rule_id": "3003",
       "rule_name": "Rapid process creation (possible fork bomb)",
@@ -115,15 +174,24 @@
       "packet_level": 15,
       "category": "process",
       "type": "net_pro",
-      "conditions": [],
+      "conditions": [
+        {
+          "field": "event",
+          "operator": "in",
+          "value": [
+            "PROC_FORK",
+            "PROC_EXEC"
+          ]
+        }
+      ],
       "threshold": {
         "count": 30,
         "window_seconds": 10,
-        "group_by": ["ppid"]
+        "group_by": [
+          "comm"
+        ]
       }
     },
-
-
     {
       "rule_id": "4001",
       "rule_name": "SSH failed login attempt",
@@ -132,10 +200,13 @@
       "category": "auth",
       "type": "log_monitoring",
       "conditions": [
-        { "field": "action", "operator": "contains", "value": "Failed password" }
+        {
+          "field": "action",
+          "operator": "contains",
+          "value": "Failed password"
+        }
       ]
     },
-
     {
       "rule_id": "4002",
       "rule_name": "SSH brute force attack",
@@ -144,17 +215,20 @@
       "category": "auth",
       "type": "log_monitoring",
       "conditions": [
-        { "field": "action", "operator": "contains", "value": "Failed password" }
+        {
+          "field": "action",
+          "operator": "contains",
+          "value": "Failed password"
+        }
       ],
       "threshold": {
         "count": 8,
         "window_seconds": 60,
-        "group_by": ["src_ip"]
+        "group_by": [
+          "src_ip"
+        ]
       }
     },
-
-
-
     {
       "rule_id": "5001",
       "rule_name": "Critical system file modified",
@@ -163,11 +237,22 @@
       "category": "fim",
       "type": "file_integrity",
       "conditions": [
-        { "field": "file", "operator": "in", "value": ["/etc/passwd", "/etc/shadow", "/etc/sudoers"] },
-        { "field": "event", "operator": "equals", "value": "MODIFIED" }
+        {
+          "field": "file",
+          "operator": "in",
+          "value": [
+            "/etc/passwd",
+            "/etc/shadow",
+            "/etc/sudoers"
+          ]
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "MODIFIED"
+        }
       ]
     },
-
     {
       "rule_id": "5002",
       "rule_name": "Critical system file deleted",
@@ -176,11 +261,19 @@
       "category": "fim",
       "type": "file_integrity",
       "conditions": [
-        { "field": "file", "operator": "regex", "value": "^\\/etc\\/" },
-        { "field": "event", "operator": "equals", "value": "DELETED" }
+        {
+          "field": "file",
+          "operator": "regex",
+          "value": "^\\/etc\\/"
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "DELETED"
+        }
       ]
     },
-      {
+    {
       "rule_id": "5003",
       "rule_name": "Critical file owner changed from root to non-root user",
       "enabled": true,
@@ -188,9 +281,21 @@
       "category": "fim",
       "type": "file_integrity",
       "conditions": [
-        { "field": "event", "operator": "equals", "value": "MODIFIED" },
-        { "field": "old_uid", "operator": "equals", "value": 0 },
-        { "field": "uid", "operator": "not_equals", "value": 0 }
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "MODIFIED"
+        },
+        {
+          "field": "old_uid",
+          "operator": "equals",
+          "value": 0
+        },
+        {
+          "field": "uid",
+          "operator": "not_equals",
+          "value": 0
+        }
       ]
     },
     {
@@ -201,8 +306,23 @@
       "category": "fim",
       "type": "file_integrity",
       "conditions": [
-        { "field": "file", "operator": "in", "value": ["/etc/passwd", "/etc/shadow", "/etc/sudoers"] },
-        { "field": "uid", "operator": "not_in", "value": [0, 1000] }
+        {
+          "field": "file",
+          "operator": "in",
+          "value": [
+            "/etc/passwd",
+            "/etc/shadow",
+            "/etc/sudoers"
+          ]
+        },
+        {
+          "field": "uid",
+          "operator": "not_in",
+          "value": [
+            0,
+            1000
+          ]
+        }
       ]
     },
     {
@@ -213,12 +333,18 @@
       "category": "fim",
       "type": "file_integrity",
       "conditions": [
-        { "field": "event", "operator": "equals", "value": "MODIFIED" },
-        { "field": "time_skew_seconds", "operator": "gte", "value": 5 }
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "MODIFIED"
+        },
+        {
+          "field": "time_skew_seconds",
+          "operator": "gte",
+          "value": 5
+        }
       ]
     },
-
-
     {
       "rule_id": "6001",
       "rule_name": "Critical vulnerability detected (CVSS >= 9)",
@@ -227,10 +353,345 @@
       "category": "vuln",
       "type": "software_list",
       "conditions": [
-        { "field": "cve_id", "operator": "is_not_null", "value": null },
-        { "field": "cvss_score", "operator": "gte", "value": 9.0 }
+        {
+          "field": "cve_id",
+          "operator": "is_not_null",
+          "value": null
+        },
+        {
+          "field": "cvss_score",
+          "operator": "gte",
+          "value": 9
+        }
       ]
-
+    },
+    {
+      "rule_id": "W100",
+      "rule_name": "Suspicious Network Tool Executed (wget/curl/nmap)",
+      "enabled": true,
+      "packet_level": 11,
+      "category": "process",
+      "type": "net_pro",
+      "conditions": [
+        {
+          "field": "comm",
+          "operator": "in",
+          "value": [
+            "wget",
+            "curl",
+            "nmap",
+            "sqlmap",
+            "nikto"
+          ]
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "PROC_EXEC"
+        }
+      ]
+    },
+    {
+      "rule_id": "W101",
+      "rule_name": "Process Executed from Shared Memory (/dev/shm)",
+      "enabled": true,
+      "packet_level": 14,
+      "category": "process",
+      "type": "net_pro",
+      "conditions": [
+        {
+          "field": "filename",
+          "operator": "regex",
+          "value": "^\\/dev\\/shm\\/"
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "PROC_EXEC"
+        }
+      ]
+    },
+    {
+      "rule_id": "W102",
+      "rule_name": "Reverse Shell Port Connection (4444/31337)",
+      "enabled": true,
+      "packet_level": 15,
+      "category": "network",
+      "type": "net_pro",
+      "conditions": [
+        {
+          "field": "dport",
+          "operator": "in",
+          "value": [
+            4444,
+            31337,
+            4433,
+            1337
+          ]
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "TCP_CONNECT"
+        }
+      ]
+    },
+    {
+      "rule_id": "W200",
+      "rule_name": "SSH Configuration Modified",
+      "enabled": true,
+      "packet_level": 12,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        {
+          "field": "file",
+          "operator": "equals",
+          "value": "/etc/ssh/sshd_config"
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "MODIFIED"
+        }
+      ]
+    },
+    {
+      "rule_id": "W201",
+      "rule_name": "Audit/Log File Tampering (/var/log)",
+      "enabled": true,
+      "packet_level": 13,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        {
+          "field": "file",
+          "operator": "regex",
+          "value": "^\\/var\\/log\\/.*"
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "DELETED"
+        }
+      ]
+    },
+    {
+      "rule_id": "W202",
+      "rule_name": "Authorized Keys Modified (Potential Backdoor)",
+      "enabled": true,
+      "packet_level": 14,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        {
+          "field": "file",
+          "operator": "regex",
+          "value": ".*\\.ssh\\/authorized_keys$"
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "MODIFIED"
+        }
+      ]
+    },
+    {
+      "rule_id": "W300",
+      "rule_name": "Root/Sudo User Added",
+      "enabled": true,
+      "packet_level": 13,
+      "category": "auth",
+      "type": "log_monitoring",
+      "conditions": [
+        {
+          "field": "command",
+          "operator": "contains",
+          "value": "useradd"
+        }
+      ]
+    },
+    {
+      "rule_id": "W301",
+      "rule_name": "Invalid SSH User Login Attempt",
+      "enabled": true,
+      "packet_level": 8,
+      "category": "auth",
+      "type": "log_monitoring",
+      "conditions": [
+        {
+          "field": "action",
+          "operator": "contains",
+          "value": "Invalid user"
+        }
+      ]
+    },
+    {
+      "rule_id": "W302",
+      "rule_name": "Sudo Command Executed by User",
+      "enabled": true,
+      "packet_level": 5,
+      "category": "auth",
+      "type": "log_monitoring",
+      "conditions": [
+        {
+          "field": "type_log",
+          "operator": "equals",
+          "value": "sudo"
+        }
+      ]
+    },
+    {
+      "rule_id": "W400",
+      "rule_name": "Mass File Modification (Possible Ransomware)",
+      "enabled": true,
+      "packet_level": 15,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "MODIFIED"
+        }
+      ],
+      "threshold": {
+        "count": 20,
+        "window_seconds": 10,
+        "group_by": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "rule_id": "W402",
+      "rule_name": "Crypto Miner Process Detected",
+      "enabled": true,
+      "packet_level": 14,
+      "category": "process",
+      "type": "net_pro",
+      "conditions": [
+        {
+          "field": "comm",
+          "operator": "in",
+          "value": [
+            "xmrig",
+            "cgminer",
+            "minerd",
+            "xmr-stak",
+            "cpuminer"
+          ]
+        },
+        {
+          "field": "event",
+          "operator": "in",
+          "value": [
+            "PROC_EXEC",
+            "PROC_FORK"
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "W403",
+      "rule_name": "Failed Root Login Attempt",
+      "enabled": true,
+      "packet_level": 10,
+      "category": "auth",
+      "type": "log_monitoring",
+      "conditions": [
+        {
+          "field": "action",
+          "operator": "contains",
+          "value": "Failed password for root"
+        }
+      ]
+    },
+    {
+      "rule_id": "W404",
+      "rule_name": "System Daemon Config Modified (Persistence)",
+      "enabled": true,
+      "packet_level": 13,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        {
+          "field": "file",
+          "operator": "regex",
+          "value": "^\\/etc\\/systemd\\/system\\/.*"
+        },
+        {
+          "field": "event",
+          "operator": "in",
+          "value": [
+            "MODIFIED",
+            "ADDED"
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "W405",
+      "rule_name": "Connection to Tor/I2P Anonymity Networks",
+      "enabled": true,
+      "packet_level": 12,
+      "category": "network",
+      "type": "net_pro",
+      "conditions": [
+        {
+          "field": "dport",
+          "operator": "in",
+          "value": [
+            9001,
+            9030,
+            9050,
+            9051
+          ]
+        },
+        {
+          "field": "event",
+          "operator": "equals",
+          "value": "TCP_CONNECT"
+        }
+      ]
+    },
+    {
+      "rule_id": "W406",
+      "rule_name": "User Account Password Changed",
+      "enabled": true,
+      "packet_level": 5,
+      "category": "auth",
+      "type": "log_monitoring",
+      "conditions": [
+        {
+          "field": "action",
+          "operator": "contains",
+          "value": "password changed for"
+        }
+      ]
+    },
+    {
+      "rule_id": "W407",
+      "rule_name": "Cron Job Modified (Persistence)",
+      "enabled": true,
+      "packet_level": 12,
+      "category": "fim",
+      "type": "file_integrity",
+      "conditions": [
+        {
+          "field": "file",
+          "operator": "regex",
+          "value": "^\\/(var\\/spool\\/cron|etc\\/cron).*"
+        },
+        {
+          "field": "event",
+          "operator": "in",
+          "value": [
+            "MODIFIED",
+            "ADDED"
+          ]
+        }
+      ]
     }
   ]
 }

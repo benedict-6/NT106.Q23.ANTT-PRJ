@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Search, Clock, Activity, ShieldCheck, CircleAlert, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Clock, Activity, ShieldCheck, CircleAlert, ChevronLeft, ChevronRight, ArrowDown01, ArrowUp01 } from 'lucide-react';
 
 import { SideBar } from '../../components/sidebar.jsx';
 import { AppHeader } from '../../components/header.jsx';
@@ -105,14 +105,21 @@ export default function FimDashboard() {
 
   // Removed mock setInterval
 
+  const [sortOrder, setSortOrder] = useState("desc");
+
   const filteredLogs = useMemo(() => {
     return displayedLogs.filter(log => {
       const matchesAgent = selectedAgent === 'all' || log.agent_id === selectedAgent;
       const matchesSearch = log.file_path?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         log.event_type?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesAgent && matchesSearch;
+    }).sort((a, b) => {
+      const timeA = new Date(a.timestamp || 0).getTime();
+      const timeB = new Date(b.timestamp || 0).getTime();
+      if (sortOrder === "asc") return timeA - timeB;
+      return timeB - timeA;
     });
-  }, [displayedLogs, selectedAgent, searchQuery]);
+  }, [displayedLogs, selectedAgent, searchQuery, sortOrder]);
 
   if (!mounted) return null;
 
@@ -235,7 +242,12 @@ export default function FimDashboard() {
                           <th className="py-3 px-4 w-40">Agent ID</th>
                           <th className="py-3 px-4 w-1/3">File Path</th>
                           <th className="py-3 px-4 w-20">Type</th>
-                          <th className="py-3 px-4 w-60">Timestamp</th>
+                          <th className="py-3 px-4 cursor-pointer hover:bg-[#1c1c1c] transition-colors w-60" onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
+                            <div className="flex items-center gap-2">
+                              Timestamp
+                              <span className="text-gray-500">{sortOrder === "asc" ? <ArrowUp01 size={18} /> : <ArrowDown01 size={18} />}</span>
+                            </div>
+                          </th>
                           <th className="py-3 px-4 text-left w-20">Size(B)</th>
                           <th className="py-3 px-4 text-left w-28">UID</th>
                           <th className="py-3 px-4 text-left w-28">GID</th>
@@ -270,14 +282,14 @@ export default function FimDashboard() {
                               </td>
 
                               <td className="py-3 px-4 text-gray-400">
-                                {(log.size ?? log._size)?.toLocaleString() || '-'}
+                                {(log.size ?? log._size) !== undefined && (log.size ?? log._size) !== null ? (log.size ?? log._size).toLocaleString() : '-'}
                               </td>
 
                               <td className="py-3 px-4 text-gray-400">
-                                {log.uid || log._uid || '-'}
+                                {log.uid ?? log._uid ?? '-'}
                               </td>
                               <td className="py-3 px-4 text-gray-400">
-                                {log.gid || '-'}
+                                {log.gid ?? '-'}
                               </td>
                               <td className="py-3 px-4">
                                 {log.permission ? (

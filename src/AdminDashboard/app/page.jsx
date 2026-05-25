@@ -9,7 +9,7 @@ import { SideBar } from '../components/sidebar.jsx';
 import { AppHeader } from '../components/header.jsx';
 import { useDashboardSocket } from '../hooks/useDashboardSocket.js';
 
-export const DashboardCard = ({ title, children, className = '' }) => (
+const DashboardCard = ({ title, children, className = '' }) => (
   <div className={`bg-[#111111] border border-[#2A2A2A] rounded-xl p-5 flex flex-col shadow-lg ${className}`}>
     <div className="flex items-center justify-between mb-4 border-b border-[#2A2A2A]/50 pb-2">
       <h3 className="text-md font-bold text-gray-200 tracking-wide">{title}</h3>

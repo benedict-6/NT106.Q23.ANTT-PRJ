@@ -72,6 +72,22 @@ const dashController = {
 		}
 	},
 
+	// Lấy danh sách alerts mới nhất
+	listAlerts: async (req, res) => {
+		try {
+			const result = await pool.query(
+				`SELECT r.rule_alert_id as id, r.agent_id, r.rule_id, r.packet_level, r.created_at, d.rule_name 
+				 FROM rule_alert r 
+				 LEFT JOIN detection_rules d ON r.rule_id = d.rule_id 
+				 ORDER BY r.created_at DESC LIMIT 50`
+			);
+			res.json({ alerts: result.rows });
+		} catch (err) {
+			console.error('Lỗi khi lấy alerts: ', err);
+			res.status(500).json({ message: 'Lỗi server' });
+		}
+	},
+
 	// Lấy config download cho một agent cụ thể
 	downloadAgentConfig: async (req, res) => {
 		const userId = req.user.userId;
@@ -138,10 +154,7 @@ const dashController = {
 			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/start.sh`);
 			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/*Collector`);
 			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/ebpf/tools/ecli`).catch(() => { });
-<<<<<<< HEAD
 			await execAsync(`chmod 644 ${tmpBuildDir}/etc/systemd/system/siem-agent.service`).catch(() => { });
-=======
->>>>>>> main
 
 			// 4. Build lại file .deb
 			await execAsync(`dpkg-deb --root-owner-group --build ${tmpBuildDir} ${tmpDebFile}`);
