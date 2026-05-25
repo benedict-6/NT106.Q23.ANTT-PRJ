@@ -43,7 +43,7 @@ const verifyAgentSession = async (req, res, next) => {
         }
 
         // Gắn thông tin agent vào request để controller dùng
-        req.agent = { 
+        req.agent = {
             agent_id: decoded.agent_id,
             secret_key: secret_key
         };

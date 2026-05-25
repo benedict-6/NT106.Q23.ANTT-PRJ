@@ -14,10 +14,12 @@ export const useDashboardSocket = () => {
 
         // Default UI Port is 6001. We construct WS URL based on MASTER_URL or default to localhost
         const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
-        let wsUrl = "ws://localhost:6001";
+        let wsUrl = process.env.NEXT_PUBLIC_SOCKET_UI || "ws://localhost:6001";
         try {
             const url = new URL(masterUrl);
-            wsUrl = `ws://${url.hostname}:6001`;
+            if (!process.env.NEXT_PUBLIC_SOCKET_UI) {
+                wsUrl = `ws://${url.hostname}:6001`;
+            }
         } catch (e) { }
 
         let ws = null;
@@ -70,10 +72,11 @@ export const useDashboardSocket = () => {
                             id: Date.now() + Math.random().toString(36).substr(2, 9),
                             agent_id: data.agent_id,
                             ...data.payload, // payload thường chứa rule_name, severity
-                            timestamp: data.time || new Date().toISOString()
+                            timestamp: data.time || new Date().toISOString(),
+                            created_at: data.payload.created_at || data.time || new Date().toISOString()
                         };
                         alertsBuffer.unshift(newAlert); // Thêm vào buffer
-                        
+
                         // Dispatch custom event for AppHeader to catch real-time alerts
                         if (typeof window !== 'undefined') {
                             window.dispatchEvent(new CustomEvent('NEW_SIEM_ALERT', { detail: newAlert }));

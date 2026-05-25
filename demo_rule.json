@@ -159,8 +159,8 @@
         }
       ],
       "threshold": {
-        "count": 10,
-        "window_seconds": 60,
+        "count": 50,
+        "window_seconds": 30,
         "group_by": [
           "saddr",
           "dport"
@@ -185,7 +185,7 @@
         }
       ],
       "threshold": {
-        "count": 30,
+        "count": 200,
         "window_seconds": 10,
         "group_by": [
           "comm"

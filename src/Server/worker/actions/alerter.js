@@ -65,7 +65,7 @@ ${JSON.stringify(alert.payload || alert, null, 4)}
     });
 
     const mailOptions = {
-        from: process.env.MAIL_USER ,
+        from: process.env.MAIL_USER,
         to: process.env.MAIL_DES,
         subject: `⚠️ [SIEM ALERT - LEVEL ${alert.packet_level}] ${alert.rule_name}`,
         text: emailContent
@@ -73,7 +73,7 @@ ${JSON.stringify(alert.payload || alert, null, 4)}
 
     try {
         // Kiểm tra xem có cấu hình email thật không
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        if (process.env.MAIL_USER && process.env.MAIL_PASS) {
             await transporter.sendMail(mailOptions);
             console.log(`[Alerter] Đã gửi email cảnh báo thật thành công tới ${mailOptions.to}!`);
         } else {

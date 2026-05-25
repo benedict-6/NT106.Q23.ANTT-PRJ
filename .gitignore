@@ -11,3 +11,6 @@ src/agents/socket_debug.go
 .env
 node_modules
 src/agents/siem-agent_1.0.0_amd64.deb
+src/Server/.env.example
+src/AdminDashboard/.env.example
+.env.example

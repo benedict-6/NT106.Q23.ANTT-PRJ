@@ -19,7 +19,7 @@ app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use("/api/agent/upload", verifyAgentSession, receiver);
 
 // Khởi động Server
-const PORT = process.env.PORT_WORKER1 || process.env.PORT_WORKER2 || process.env.PORT_WORKER3 || process.env.PORT_WORKER4 || 3001;
+const PORT = process.env.PORT || process.env.PORT_WORKER1 || process.env.PORT_WORKER2 || process.env.PORT_WORKER3 || process.env.PORT_WORKER4 || 3001;
 
 httpServer.listen(PORT, () => {
     console.log(`Server Worker running on port ${PORT}`);

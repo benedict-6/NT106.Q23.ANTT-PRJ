@@ -17,7 +17,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
 
     React.useEffect(() => {
-        if(errorMsg){
+        if (errorMsg) {
             const death = setTimeout(() => {
                 setErrorMsg('');
             }, 10 * 1000); // error notification will disappear after 10s
@@ -70,7 +70,7 @@ export default function LoginPage() {
                             router.push('/');
                         }
                     }, 1000);
-                
+
                 } catch (decodeError) {
                     console.error("Lỗi giải mã token:", decodeError);
                     router.push('/login');
@@ -86,7 +86,7 @@ export default function LoginPage() {
             setIsLoading(false);
             console.log("[5] Hoàn tất vòng lặp!");
         }
-     };
+    };
 
     return (
         <div className="min-h-screen hacker-bg flex flex-col items-center justify-center p-4 relative overflow-hidden font-mono">
@@ -160,7 +160,7 @@ export default function LoginPage() {
                         </div>
 
                         {errorMsg && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -5 }}
@@ -173,9 +173,9 @@ export default function LoginPage() {
                                 </div>
                             </motion.div>
                         )}
-                        
+
                         {successMsg && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -5 }}

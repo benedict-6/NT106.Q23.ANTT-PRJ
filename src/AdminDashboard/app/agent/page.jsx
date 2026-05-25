@@ -36,10 +36,9 @@ export default function CreateAgentPage() {
 
     setIsLoading(true);
     const token = localStorage.getItem('token');
-    const masterUrl = process.env.NEXT_PUBLIC_MASTER_URL || "http://localhost:3000";
 
     try {
-      const createResponse = await fetch(`${masterUrl}/api/dashboard/agents/create`, {
+      const createResponse = await fetch(`${process.env.NEXT_PUBLIC_MASTER_URL}/api/dashboard/agents/create`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
