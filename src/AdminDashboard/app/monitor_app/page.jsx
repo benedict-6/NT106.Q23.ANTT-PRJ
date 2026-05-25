@@ -40,11 +40,7 @@ const ApplicationsPage = () => {
   const uniqueAgentList = useMemo(() => {
     const listFromLogs = [...new Set(displayedApps.map(app => app.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-<<<<<<< HEAD
     return ['all', ...new Set([...listFromApi, ...listFromLogs])];
-=======
-    return [...new Set([...listFromApi, ...listFromLogs])];
->>>>>>> main
   }, [agents, displayedApps]);
 
   const [agentId, setAgentId] = useState("all");
@@ -56,11 +52,7 @@ const ApplicationsPage = () => {
 
   // Gửi request lấy historical db applications khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
-<<<<<<< HEAD
     if (isConnected) {
-=======
-    if (agentId && isConnected) {
->>>>>>> main
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_APPLICATIONS', agentId, isLive ? undefined : timeRange);
     }
@@ -127,10 +119,7 @@ const ApplicationsPage = () => {
   };
 
   const getAgentName = (id) => {
-<<<<<<< HEAD
     if (id === 'all') return 'ALL';
-=======
->>>>>>> main
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };

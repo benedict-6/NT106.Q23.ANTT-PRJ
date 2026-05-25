@@ -5,7 +5,11 @@
     "scripts": {
         "dev:master": "nodemon src/Server/master/server_master.js",
         "dev:worker": "nodemon src/Server/worker/server_worker.js",
-        "dev": "concurrently \"npm run dev:master\" \"npm run dev:worker\""
+        "dev:worker1": "PORT=3001 nodemon src/Server/worker/server_worker.js",
+        "dev:worker2": "PORT=3002 nodemon src/Server/worker/server_worker.js",
+        "dev:worker3": "PORT=3003 nodemon src/Server/worker/server_worker.js",
+        "dev": "concurrently \"npm run dev:master\" \"npm run dev:worker\"",
+        "dev:cluster": "concurrently \"npm run dev:master\" \"npm run dev:worker1\" \"npm run dev:worker2\" \"npm run dev:worker3\""
     },
     "dependencies": {
         "archiver": "^8.0.0",
