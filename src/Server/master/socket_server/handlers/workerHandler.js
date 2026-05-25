@@ -5,6 +5,8 @@ import { WebSocketServer } from 'ws';
 import { updateLastActive } from "../services/agentService.js";
 import { getAllRules } from "../services/ruleLoader.js";
 import { activeUIs } from "./uiHandler.js";
+import { GCMdecrypt } from "../../../shared/utils/cryptoUtils.js";
+import pool from "../../../shared/database/connect.js";
 
 export const activeWorkers = new Map();
 
@@ -53,6 +55,24 @@ export default function WebsocketHandler(port) {
 							message: rules
 						})
 					)
+
+					// Gửi toàn bộ key của Agent cho Worker lưu RAM
+					try {
+						const agentsRes = await pool.query("SELECT agent_id, secret_key, secret_key_iv, secret_key_auth_tag FROM agents WHERE secret_key IS NOT NULL");
+						const agentKeys = {};
+						for (const agent of agentsRes.rows) {
+							const cipherObject = {
+								encryptedData: agent.secret_key,
+								iv: agent.secret_key_iv,
+								authTag: agent.secret_key_auth_tag
+							};
+							agentKeys[agent.agent_id] = GCMdecrypt(cipherObject);
+						}
+						ws.send(JSON.stringify({ type: 'AGENT_KEYS_SYNC', payload: agentKeys }));
+					} catch (err) {
+						console.error("[Master] Lỗi khi gửi agent keys cho worker:", err.message);
+					}
+
 					return;
 				}
 				if (!ws.workerID) {

@@ -4,6 +4,13 @@
 import jwt from 'jsonwebtoken';
 import { sendToMaster } from '../socket_client/services/serviceMasterSocket.js';
 
+// Khởi tạo RAM cache chứa toàn bộ key do Master đẩy sang
+export const keyCache = new Map();
+
+export function updateKeyCache(agent_id, secret_key) {
+    keyCache.set(agent_id, secret_key);
+}
+
 const verifyAgentSession = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
 
@@ -29,8 +36,17 @@ const verifyAgentSession = async (req, res, next) => {
             }
         });
 
+        // Chỉ việc lôi trong RAM ra xài, Master đã tự động đẩy qua cho rồi!
+        const secret_key = keyCache.get(decoded.agent_id);
+        if (!secret_key) {
+            return res.status(401).json({ message: 'Không tìm thấy khóa AES của Agent trong RAM. Có thể Agent chưa Handshake!' });
+        }
+
         // Gắn thông tin agent vào request để controller dùng
-        req.agent = { agent_id: decoded.agent_id };
+        req.agent = { 
+            agent_id: decoded.agent_id,
+            secret_key: secret_key
+        };
 
         next();
     } catch (err) {

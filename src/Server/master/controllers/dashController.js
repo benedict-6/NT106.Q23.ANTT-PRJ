@@ -138,6 +138,7 @@ const dashController = {
 			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/start.sh`);
 			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/*Collector`);
 			await execAsync(`chmod +x ${tmpBuildDir}/opt/siem-agent/ebpf/tools/ecli`).catch(() => { });
+			await execAsync(`chmod 644 ${tmpBuildDir}/etc/systemd/system/siem-agent.service`).catch(() => { });
 
 			// 4. Build lại file .deb
 			await execAsync(`dpkg-deb --root-owner-group --build ${tmpBuildDir} ${tmpDebFile}`);

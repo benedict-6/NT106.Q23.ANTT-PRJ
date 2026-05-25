@@ -85,6 +85,19 @@ export const useDashboardSocket = () => {
                         }));
                     }
 
+                    if (data.type === 'AGENTS_DISCONNECTED') {
+                        setAgentStatuses(prev => {
+                            const newStatuses = { ...prev };
+                            data.payload.forEach(id => {
+                                newStatuses[id] = {
+                                    status: 'offline',
+                                    last_active: new Date().toISOString()
+                                };
+                            });
+                            return newStatuses;
+                        });
+                    }
+
                     if (data.type === 'FIM_LOGS_RESPONSE' ||
                         data.type === 'NETPRO_LOGS_RESPONSE' ||
                         data.type === 'SYSLOGS_RESPONSE' ||

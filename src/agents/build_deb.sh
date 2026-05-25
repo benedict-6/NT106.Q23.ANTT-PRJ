@@ -80,6 +80,9 @@ RestartSec=3
 [Install]
 WantedBy=multi-user.target
 EOF
+chmod 644 "$DEB_DIR/etc/systemd/system/siem-agent.service"
+chmod +x "$DEB_DIR/opt/siem-agent/"*Collector
+
 
 echo "7. Creating postinst and prerm scripts..."
 cat << 'EOF' > "$DEB_DIR/DEBIAN/postinst"

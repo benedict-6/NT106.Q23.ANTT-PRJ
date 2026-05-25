@@ -40,15 +40,10 @@ const ApplicationsPage = () => {
   const uniqueAgentList = useMemo(() => {
     const listFromLogs = [...new Set(displayedApps.map(app => app.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
-    return [...new Set([...listFromApi, ...listFromLogs])];
+    return ['all', ...new Set([...listFromApi, ...listFromLogs])];
   }, [agents, displayedApps]);
 
-  const [agentId, setAgentId] = useState("");
-  useEffect(() => {
-    if (!agentId && uniqueAgentList.length > 0) {
-      setAgentId(uniqueAgentList[0]);
-    }
-  }, [uniqueAgentList, agentId]);
+  const [agentId, setAgentId] = useState("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("24h");
@@ -57,7 +52,7 @@ const ApplicationsPage = () => {
 
   // Gửi request lấy historical db applications khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
-    if (agentId && isConnected) {
+    if (isConnected) {
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_APPLICATIONS', agentId, isLive ? undefined : timeRange);
     }
@@ -124,13 +119,14 @@ const ApplicationsPage = () => {
   };
 
   const getAgentName = (id) => {
+    if (id === 'all') return 'ALL';
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };
 
   const filteredAndSortedData = useMemo(() => {
     return displayedApps.filter((app) => {
-      if (app.agent_id !== agentId) return false;
+      if (agentId !== 'all' && app.agent_id !== agentId) return false;
       if (searchQuery && !app.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     }).sort((a, b) => {
