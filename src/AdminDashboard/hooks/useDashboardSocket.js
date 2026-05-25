@@ -85,6 +85,7 @@ export const useDashboardSocket = () => {
                         }));
                     }
 
+<<<<<<< HEAD
                     if (data.type === 'AGENTS_DISCONNECTED') {
                         setAgentStatuses(prev => {
                             const newStatuses = { ...prev };
@@ -98,6 +99,8 @@ export const useDashboardSocket = () => {
                         });
                     }
 
+=======
+>>>>>>> main
                     if (data.type === 'FIM_LOGS_RESPONSE' ||
                         data.type === 'NETPRO_LOGS_RESPONSE' ||
                         data.type === 'SYSLOGS_RESPONSE' ||

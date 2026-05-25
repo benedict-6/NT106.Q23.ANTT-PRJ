@@ -56,7 +56,11 @@ const NetproPage = () => {
 
   // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
+<<<<<<< HEAD
     if (isConnected) {
+=======
+    if (agentId && isConnected) {
+>>>>>>> main
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_NETPRO_LOGS', agentId, isLive ? undefined : timeRange);
     }
@@ -96,14 +100,21 @@ const NetproPage = () => {
   };
 
   const getAgentName = (id) => {
+<<<<<<< HEAD
     if (id === 'all') return 'ALL';
+=======
+>>>>>>> main
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
+<<<<<<< HEAD
       if (agentId !== 'all' && log.agent_id !== agentId) return false;
+=======
+      if (log.agent_id !== agentId) return false;
+>>>>>>> main
 
       const commStr = log.comm || "";
       const eventTypeStr = log.event_type || "";
@@ -121,7 +132,11 @@ const NetproPage = () => {
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
+<<<<<<< HEAD
       if (agentId !== 'all' && alert.agent_id !== agentId) return false;
+=======
+      if (alert.agent_id !== agentId) return false;
+>>>>>>> main
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [displayedAlerts, agentId]);
@@ -131,7 +146,11 @@ const NetproPage = () => {
     let stats = { min1: 0, min30: 0, min60: 0, day1: 0, day30: 0 };
 
     displayedAlerts.forEach((alert) => {
+<<<<<<< HEAD
       if (agentId !== 'all' && alert.agent_id !== agentId) return;
+=======
+      if (alert.agent_id !== agentId) return;
+>>>>>>> main
 
       const alertTime = new Date(alert.timestamp);
       const diffMs = Math.abs(now - alertTime);
