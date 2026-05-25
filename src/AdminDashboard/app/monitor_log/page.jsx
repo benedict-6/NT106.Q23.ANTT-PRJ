@@ -42,16 +42,15 @@ const NetproPage = () => {
   const uniqueAgentList = useMemo(() => {
     const listFromLogs = [...new Set(displayedLogs.map(log => log.agent_id))];
     const listFromApi = agents.map(a => a.agent_id);
+<<<<<<< HEAD
+    return ['all', ...new Set([...listFromApi, ...listFromLogs])];
+=======
     return [...new Set([...listFromApi, ...listFromLogs])];
+>>>>>>> main
   }, [agents, displayedLogs]);
 
-  const [agentId, setAgentId] = useState("");
+  const [agentId, setAgentId] = useState("all");
 
-  useEffect(() => {
-    if (!agentId && uniqueAgentList.length > 0) {
-      setAgentId(uniqueAgentList[0]);
-    }
-  }, [uniqueAgentList, agentId]);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("24h");
   const [isLive, setIsLive] = useState(true);
@@ -59,7 +58,11 @@ const NetproPage = () => {
 
   // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
+<<<<<<< HEAD
+    if (isConnected) {
+=======
     if (agentId && isConnected) {
+>>>>>>> main
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_SYSLOGS', agentId, isLive ? undefined : timeRange);
     }
@@ -128,13 +131,21 @@ const NetproPage = () => {
   };
 
   const getAgentName = (id) => {
+<<<<<<< HEAD
+    if (id === 'all') return 'ALL';
+=======
+>>>>>>> main
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
+<<<<<<< HEAD
+      if (agentId !== 'all' && log.agent_id !== agentId) return false;
+=======
       if (log.agent_id !== agentId) return false;
+>>>>>>> main
 
       if (searchQuery &&
         !log.service.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -151,7 +162,11 @@ const NetproPage = () => {
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
+<<<<<<< HEAD
+      if (agentId !== 'all' && alert.agent_id !== agentId) return false;
+=======
       if (alert.agent_id !== agentId) return false;
+>>>>>>> main
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [displayedAlerts, agentId]);

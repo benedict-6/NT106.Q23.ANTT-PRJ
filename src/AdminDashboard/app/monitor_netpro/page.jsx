@@ -40,17 +40,10 @@ const NetproPage = () => {
   const uniqueAgentList = useMemo(() => {
     const apiAgentIds = agents.map(a => a.agent_id);
     const logAgentIds = [...new Set(socketLogs.map(log => log.agent_id))];
-    return [...new Set([...apiAgentIds, ...logAgentIds])];
+    return ['all', ...new Set([...apiAgentIds, ...logAgentIds])];
   }, [agents, socketLogs]);
 
-  const [agentId, setAgentId] = useState("");
-
-  // Tự động set agentId đầu tiên nếu chưa có
-  useEffect(() => {
-    if (!agentId && uniqueAgentList.length > 0) {
-      setAgentId(uniqueAgentList[0]);
-    }
-  }, [uniqueAgentList, agentId]);
+  const [agentId, setAgentId] = useState("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("24h");
@@ -63,7 +56,7 @@ const NetproPage = () => {
 
   // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
   useEffect(() => {
-    if (agentId && isConnected) {
+    if (isConnected) {
       setDbLogs([]); // Clear old state
       fetchDbLogsViaSocket('FETCH_NETPRO_LOGS', agentId, isLive ? undefined : timeRange);
     }
@@ -103,13 +96,14 @@ const NetproPage = () => {
   };
 
   const getAgentName = (id) => {
+    if (id === 'all') return 'ALL';
     const agent = agents.find(a => a.agent_id === id);
     return agent ? agent.hostname : id;
   };
 
   const filteredAndSortedLogs = useMemo(() => {
     return displayedLogs.filter((log) => {
-      if (log.agent_id !== agentId) return false;
+      if (agentId !== 'all' && log.agent_id !== agentId) return false;
 
       const commStr = log.comm || "";
       const eventTypeStr = log.event_type || "";
@@ -127,7 +121,7 @@ const NetproPage = () => {
 
   const filteredAlerts = useMemo(() => {
     return displayedAlerts.filter((alert) => {
-      if (alert.agent_id !== agentId) return false;
+      if (agentId !== 'all' && alert.agent_id !== agentId) return false;
       return true;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [displayedAlerts, agentId]);
@@ -137,7 +131,7 @@ const NetproPage = () => {
     let stats = { min1: 0, min30: 0, min60: 0, day1: 0, day30: 0 };
 
     displayedAlerts.forEach((alert) => {
-      if (alert.agent_id !== agentId) return;
+      if (agentId !== 'all' && alert.agent_id !== agentId) return;
 
       const alertTime = new Date(alert.timestamp);
       const diffMs = Math.abs(now - alertTime);
@@ -192,7 +186,7 @@ const NetproPage = () => {
                 </button>
 
                 <div className="flex flex-wrap gap-2 bg-[#050505] p-1 border-none">
-                  {uniqueAgentList.slice(0, 3).map((id) => (
+                  {uniqueAgentList.map((id) => (
                     <button
                       key={id}
                       onClick={() => setAgentId(id)}
