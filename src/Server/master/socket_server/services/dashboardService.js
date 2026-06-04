@@ -70,7 +70,7 @@ const getTimeRangeInterval = (timeRange) => {
 /**
  * Lấy danh sách logs FIM từ database cho 1 agent hoặc tất cả agents
  */
-export const getFimLogs = async (agentId, timeRange) => {
+export const getFimLogs = async (agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT file_log_id as id, agent_id, file_path, event_type, old_hash, new_hash, _uid, gid, inode, _size, permission, _timestamp as timestamp, mtime, created_at
                      FROM file_integrity`;
@@ -91,7 +91,13 @@ export const getFimLogs = async (agentId, timeRange) => {
             query += ` WHERE ${conditions.join(' AND ')}`;
         }
 
-        query += ` ORDER BY created_at DESC LIMIT 1000`;
+        query += ` ORDER BY created_at DESC`;
+        
+        const limit = 1000;
+        const pageNum = parseInt(page, 10) || 1;
+        const offset = (pageNum - 1) * limit;
+        query += ` LIMIT ${limit} OFFSET ${offset}`;
+
         const result = await pool.query(query, params);
         return result.rows;
     } catch (err) {
@@ -103,7 +109,7 @@ export const getFimLogs = async (agentId, timeRange) => {
 /**
  * Lấy danh sách logs NetPro từ database cho 1 agent hoặc tất cả agents
  */
-export const getNetProLogs = async (agentId, timeRange) => {
+export const getNetProLogs = async (agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT net_pro_id as id, agent_id, event_type, pid, ppid, _uid, gid, comm, file_path, exit_code, src_ip, dest_ip, protocol, sport, dport, _state, _timestamp as timestamp, created_at
                      FROM net_pro`;
@@ -124,7 +130,13 @@ export const getNetProLogs = async (agentId, timeRange) => {
             query += ` WHERE ${conditions.join(' AND ')}`;
         }
 
-        query += ` ORDER BY created_at DESC LIMIT 1000`;
+        query += ` ORDER BY created_at DESC`;
+        
+        const limit = 1000;
+        const pageNum = parseInt(page, 10) || 1;
+        const offset = (pageNum - 1) * limit;
+        query += ` LIMIT ${limit} OFFSET ${offset}`;
+
         const result = await pool.query(query, params);
         return result.rows;
     } catch (err) {
@@ -136,7 +148,7 @@ export const getNetProLogs = async (agentId, timeRange) => {
 /**
  * Lấy danh sách logs Syslog/System từ database cho 1 agent hoặc tất cả agents
  */
-export const getSyslogs = async (agentId, timeRange) => {
+export const getSyslogs = async (agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT log_monitoring_id as id, agent_id, file_path, _timestamp as timestamp, _service as service, pid, _action as action, src_ip, _user as "user", port, type_log, created_at
                      FROM log_monitoring`;
@@ -157,7 +169,13 @@ export const getSyslogs = async (agentId, timeRange) => {
             query += ` WHERE ${conditions.join(' AND ')}`;
         }
 
-        query += ` ORDER BY created_at DESC LIMIT 1000`;
+        query += ` ORDER BY created_at DESC`;
+        
+        const limit = 1000;
+        const pageNum = parseInt(page, 10) || 1;
+        const offset = (pageNum - 1) * limit;
+        query += ` LIMIT ${limit} OFFSET ${offset}`;
+
         const result = await pool.query(query, params);
         return result.rows;
     } catch (err) {
@@ -169,7 +187,7 @@ export const getSyslogs = async (agentId, timeRange) => {
 /**
  * Lấy danh sách ứng dụng đã cài đặt từ database cho 1 agent hoặc tất cả agents
  */
-export const getApplications = async (agentId, timeRange) => {
+export const getApplications = async (agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT app_id as id, agent_id, software_name, _version
                      FROM applications`;
@@ -185,7 +203,13 @@ export const getApplications = async (agentId, timeRange) => {
             query += ` WHERE ${conditions.join(' AND ')}`;
         }
 
-        query += ` ORDER BY app_id DESC LIMIT 1000`;
+        query += ` ORDER BY app_id DESC`;
+        
+        const limit = 1000;
+        const pageNum = parseInt(page, 10) || 1;
+        const offset = (pageNum - 1) * limit;
+        query += ` LIMIT ${limit} OFFSET ${offset}`;
+
         const result = await pool.query(query, params);
         return result.rows;
     } catch (err) {

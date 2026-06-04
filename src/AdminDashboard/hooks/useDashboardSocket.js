@@ -152,9 +152,9 @@ export const useDashboardSocket = () => {
         setDbLogs([]);
     }, []);
 
-    const fetchDbLogsViaSocket = useCallback((type, agentId, timeRange) => {
+    const fetchDbLogsViaSocket = useCallback((type, agentId, timeRange, page = 1) => {
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type, agent_id: agentId, timeRange }));
+            socket.send(JSON.stringify({ type, agent_id: agentId, timeRange, page }));
         } else {
             console.warn("[WS] Socket not open, cannot fetch DB logs:", type, agentId);
         }
