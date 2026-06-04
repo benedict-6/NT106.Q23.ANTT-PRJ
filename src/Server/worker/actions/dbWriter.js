@@ -145,6 +145,31 @@ export const saveRuleAlert = async (triggeredAlerts, alertObj, logId, createdAtD
                     log_monitoring_id, log_monitoring_created_at
                 ]
             );
+
+            // Truy vấn lấy tên luật phát hiện (rule_name) để hiển thị chi tiết hơn
+            let ruleName = `Luật #${alert.rule_id}`;
+            try {
+                const ruleResult = await pool.query("SELECT rule_name FROM detection_rules WHERE rule_id = $1", [alert.rule_id]);
+                if (ruleResult.rows.length > 0 && ruleResult.rows[0].rule_name) {
+                    ruleName = ruleResult.rows[0].rule_name;
+                }
+            } catch (qErr) {
+                console.error("[DBWriter] Lỗi truy vấn detection_rules:", qErr.message);
+            }
+
+            // Gửi cảnh báo về Agent qua TCP Socket (Sử dụng dynamic import để tránh lỗi vòng lặp import)
+            try {
+                const { sendAlertToAgent } = await import("../receiver/tcpReceiver.js");
+                sendAlertToAgent(alert.agent_id, {
+                    rule_id: alert.rule_id,
+                    rule_name: ruleName,
+                    level: alert.packet_level,
+                    log_type: logType,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (importErr) {
+                console.error("[DBWriter] Không thể gửi alert về Agent:", importErr.message);
+            }
         }
     }
 };
@@ -171,6 +196,20 @@ export const saveRuleAlertSoftware = async (cveList, agent_id, app_id) => {
                     agent_id, cve.id, 15, true
                 ]
             );
+
+            // Gửi cảnh báo CVE về Agent qua TCP Socket
+            try {
+                const { sendAlertToAgent } = await import("../receiver/tcpReceiver.js");
+                sendAlertToAgent(agent_id, {
+                    rule_id: cve.id,
+                    rule_name: `Lỗ hổng phần mềm nghiêm trọng: ${cve.id}`,
+                    level: 15,
+                    log_type: 'software_vulnerability',
+                    timestamp: new Date().toISOString()
+                });
+            } catch (importErr) {
+                console.error("[DBWriter] Không thể gửi alert CVE về Agent:", importErr.message);
+            }
         }
     }
 };

@@ -9,6 +9,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -16,10 +17,13 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -39,7 +43,12 @@ type AgentConfig struct {
 	SessionToken string `json:"-"`
 }
 
-var currentConfig AgentConfig
+var (
+	currentConfig AgentConfig
+	tcpConn       net.Conn
+	connMutex     sync.Mutex
+	writeMutex    sync.Mutex // Bảo vệ đồng bộ các thao tác ghi dữ liệu xuống Socket tránh bị dính gói chéo nhau
+)
 
 // Metric format sent by collectors
 type AgentMessage struct {
@@ -74,7 +83,6 @@ func main() {
 		log.Fatalf("Listen error: %v", err)
 	}
 	defer listener.Close() //  tắt ngay khi main kết thúc
-
 	log.Printf("Listening on Unix socket: %s", socketPath)
 	os.Chmod(socketPath, 0777) // cấp quyền truy cập cho socketpath
 
@@ -84,6 +92,9 @@ func main() {
 	// Worker to process and send data
 	go dataProcessor(dataCh)
 
+	// Khởi chạy Keep-Alive Heartbeat cho kết nối TCP
+	startHeartbeat()
+
 	// Handle graceful shutdown
 	sigCh := make(chan os.Signal, 1) // tạo 1 channel để nhận tín hiệu từ hệ điều hành
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -91,6 +102,7 @@ func main() {
 		<-sigCh
 		log.Println("Stopping agentCollector...")
 		listener.Close()
+		closeTCPConnection()
 		os.Exit(0)
 	}()
 
@@ -195,6 +207,8 @@ func performHandshake() error {
 	if token, ok := result["session_token"]; ok {
 		currentConfig.SessionToken = token
 		log.Printf("Session token đã nhận được từ Master Server")
+		// Đóng kết nối cũ để lần gửi tiếp theo dùng token mới kết nối lại và xác thực lại
+		closeTCPConnection()
 	} else {
 		return fmt.Errorf("response không chứa session_token")
 	}
@@ -246,22 +260,182 @@ func dataProcessor(dataCh <-chan []byte) { // dùng goroutine bất đồng bộ
 	}
 }
 
+func getTCPConnection() (net.Conn, error) {
+	connMutex.Lock()
+	defer connMutex.Unlock()
+
+	// Trả về kết nối hiện có nếu kết nối đó vẫn hoạt động (chưa bị đóng/gặp lỗi)
+	if tcpConn != nil {
+		return tcpConn, nil
+	}
+
+	// Trích xuất host và port từ LoadBalanceURL
+	rawAddr := currentConfig.LoadBalanceURL
+	if !strings.HasPrefix(rawAddr, "http://") && !strings.HasPrefix(rawAddr, "https://") && !strings.HasPrefix(rawAddr, "tcp://") {
+		rawAddr = "tcp://" + rawAddr
+	}
+
+	u, err := url.Parse(rawAddr)
+	if err != nil {
+		return nil, fmt.Errorf("không thể parse LoadBalanceURL: %w", err)
+	}
+
+	tcpAddr := u.Host
+	if tcpAddr == "" {
+		return nil, fmt.Errorf("LoadBalanceURL không chứa host/port")
+	}
+
+	log.Printf("[TCP Client] Đang khởi tạo Socket và kết nối tới TCP Server: %s...", tcpAddr)
+	// ĐOẠN 1: TẠO SOCKET TCP & KẾT NỐI
+	// Sử dụng net.DialTimeout để tạo một kết nối Socket TCP chủ động tới địa chỉ đích.
+	// Có timeout 5 giây để tránh việc chương trình bị treo nếu Server không hoạt động.
+	conn, err := net.DialTimeout("tcp", tcpAddr, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	// Xác thực thông tin kết nối (Authentication)
+	token := currentConfig.SessionToken
+	if token == "" {
+		conn.Close()
+		return nil, fmt.Errorf("chưa có Session Token, cần handshake trước")
+	}
+
+	tokenBytes := []byte(token)
+	length := uint32(len(tokenBytes))
+
+	// Chuẩn bị Header của Frame Auth: [1 byte: Type (0x01)] + [4 bytes: Length (Độ dài Token)]
+	header := make([]byte, 5)
+	header[0] = 0x01 // Gói tin có loại là 0x01 (Auth Request)
+	binary.BigEndian.PutUint32(header[1:5], length)
+
+	// Thiết lập thời hạn tối đa cho việc ghi dữ liệu vào Socket (5 giây) để tránh tắc nghẽn
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+
+	// ĐOẠN 2: GHI DỮ LIỆU VÀO SOCKET (GỬI AUTH HEADER & PAYLOAD)
+	// Ghi 5 bytes Header chứa mã gói tin và độ dài payload xuống cổng socket
+	if _, err := conn.Write(header); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	// Tiếp tục ghi dữ liệu thô (JWT Session Token) nối tiếp vào luồng truyền dẫn socket
+	if _, err := conn.Write(tokenBytes); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	// Thiết lập thời hạn tối đa cho việc đọc dữ liệu từ Socket (5 giây) phòng trường hợp Server bị đơ
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+	// ĐOẠN 3: ĐỌC DỮ LIỆU TỪ SOCKET (NHẬN PHẢN HỒI XÁC THỰC - AUTH RESPONSE)
+	// Đọc trước đúng 5 bytes đầu tiên của gói tin phản hồi (Header) để lấy thông tin Type và Length
+	// io.ReadFull đảm bảo sẽ đọc đủ số byte yêu cầu, nếu socket bị ngắt nửa chừng sẽ báo lỗi ngay lập tức
+	respHeader := make([]byte, 5)
+	if _, err := io.ReadFull(conn, respHeader); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("lỗi đọc auth response header: %w", err)
+	}
+
+	// Phản hồi phản hồi xác thực phải có Type = 0x04
+	if respHeader[0] != 0x04 {
+		conn.Close()
+		return nil, fmt.Errorf("phản hồi auth sai định dạng type: %d", respHeader[0])
+	}
+
+	// Đọc độ dài dữ liệu phản hồi (chuyển 4 bytes Big-Endian về dạng số nguyên uint32)
+	respLen := binary.BigEndian.Uint32(respHeader[1:5])
+	if respLen != 1 {
+		conn.Close()
+		return nil, fmt.Errorf("độ dài phản hồi auth không hợp lệ: %d", respLen)
+	}
+
+	// Đọc đúng số bytes payload tương ứng (ở đây là 1 byte mã trạng thái phản hồi) từ Socket
+	statusByte := make([]byte, 1)
+	if _, err := io.ReadFull(conn, statusByte); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("lỗi đọc status byte: %w", err)
+	}
+
+	// Kiểm tra kết quả xác thực từ server (0x00 là thành công)
+	if statusByte[0] != 0x00 {
+		conn.Close()
+		// Nếu token không hợp lệ hoặc hết hạn (mã 0x02), chạy handshake HTTP nền để lấy token mới
+		if statusByte[0] == 0x02 {
+			log.Println("[TCP Client] Token không hợp lệ. Đang yêu cầu handshake lại...")
+			go performHandshake()
+		}
+		return nil, fmt.Errorf("server từ chối xác thực TCP, mã lỗi: %d", statusByte[0])
+	}
+
+	log.Printf("[TCP Client] Kết nối và xác thực thành công tới %s", tcpAddr)
+	tcpConn = conn
+
+	// Khởi chạy luồng đọc dữ liệu từ Server bất đồng bộ (Nhận Pong, Alert...)
+	go readLoop(conn)
+
+	return tcpConn, nil
+}
+
+func closeTCPConnection() {
+	connMutex.Lock()
+	defer connMutex.Unlock()
+	// Thực hiện đóng Socket an toàn và dọn dẹp biến đại diện kết nối
+	if tcpConn != nil {
+		tcpConn.Close()
+		tcpConn = nil
+		log.Println("[TCP Client] Đã đóng kết nối TCP chủ động")
+	}
+}
+
+func startHeartbeat() {
+	// Khởi tạo ticker gửi gói tin Ping định kỳ mỗi 30 giây để giữ kết nối không bị timeout ngắt
+	ticker := time.NewTicker(30 * time.Second)
+	go func() {
+		for range ticker.C {
+			connMutex.Lock()
+			conn := tcpConn
+			connMutex.Unlock()
+
+			if conn != nil {
+				// Chuẩn bị gói tin Ping: [Type: 0x03 (Ping)] + [Length: 0]
+				header := make([]byte, 5)
+				header[0] = 0x03
+				binary.BigEndian.PutUint32(header[1:5], 0)
+
+				// ĐOẠN 4: GHI PING HEARTBEAT VÀO SOCKET
+				// Đồng bộ ghi bằng writeMutex để tránh gửi gói Ping chen giữa gói tin Logs lớn đang gửi
+				writeMutex.Lock()
+				conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+				_, err := conn.Write(header)
+				writeMutex.Unlock()
+
+				if err != nil {
+					log.Printf("[TCP Ping] Lỗi gửi Ping: %v. Đóng kết nối để reconnect sau.", err)
+					closeTCPConnection()
+				}
+			}
+		}
+	}()
+}
+
 func sendBatch(batch [][]byte) {
+	// Gộp dữ liệu trong batch lại cách nhau bởi ký tự xuống dòng
 	var buffer bytes.Buffer
 	for _, b := range batch {
 		buffer.Write(b)
 		buffer.WriteString("\n")
 	}
 
-	// 2. Compress via Gzip
+	// 2. Thực hiện nén dữ liệu bằng Gzip để tiết kiệm dung lượng đường truyền
 	var compressed bytes.Buffer
 	gw := gzip.NewWriter(&compressed)
 	if _, err := gw.Write(buffer.Bytes()); err != nil {
+		log.Printf("Lỗi nén Gzip: %v", err)
 		return
 	}
 	gw.Close()
 
-	// 3. AES Encrypt
+	// 3. Thực hiện mã hóa AES-GCM để bảo vệ dữ liệu truyền tải
 	block, err := aes.NewCipher([]byte(currentConfig.SecretKey))
 	if err != nil {
 		log.Printf("Lỗi tạo cipher AES: %v", err)
@@ -279,36 +453,143 @@ func sendBatch(batch [][]byte) {
 	}
 
 	ciphertext := aesgcm.Seal(nil, nonce, compressed.Bytes(), nil)
-	finalData := append(nonce, ciphertext...)
+	finalData := append(nonce, ciphertext...) // finalData = [12 bytes Nonce] + [Mã hóa AES GCM] + [16 bytes Auth Tag]
 
-	// 4. Send to server
-	req, err := http.NewRequest("POST", currentConfig.LoadBalanceURL+"/api/agent/upload", bytes.NewReader(finalData))
-	if err != nil {
+	// 4. Gửi dữ liệu qua kết nối TCP dài hạn (Thử lại tối đa 3 lần)
+	for attempt := 1; attempt <= 3; attempt++ {
+		conn, err := getTCPConnection()
+		if err != nil {
+			log.Printf("[TCP Client] Không thể kết nối/xác thực TCP (Lần %d/3): %v", attempt, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		// Chuẩn bị gói tin chứa data gửi đi: [Type: 0x02 (Data)] + [Length: Độ dài dữ liệu mã hóa]
+		length := uint32(len(finalData))
+		header := make([]byte, 5)
+		header[0] = 0x02 // Type: 0x02 đại diện cho gói tin chứa dữ liệu logs
+		binary.BigEndian.PutUint32(header[1:5], length)
+
+		// Đặt thời gian timeout truyền tải dữ liệu là 15 giây
+		conn.SetWriteDeadline(time.Now().Add(15 * time.Second))
+		
+		// ĐOẠN 6: GHI HEADER VÀ PAYLOAD DỮ LIỆU VÀO SOCKET
+		// Giải pháp khắc phục tránh Race Condition: Sử dụng writeMutex (khóa loại trừ lẫn nhau cho việc ghi).
+		// Khi Agent chuẩn bị ghi Header + Payload, nó sẽ gọi writeMutex.Lock().
+		// Mọi Goroutine khác (kể cả Ping Heartbeat chạy song song) muốn ghi vào Socket lúc này đều phải
+		// xếp hàng đợi cho đến khi Goroutine hiện tại ghi xong trọn vẹn cả Header lẫn Payload và gọi writeMutex.Unlock().
+		// Điều này đảm bảo tuyệt đối Header đi trước và Payload đi liền sau mà không bị xen ngang.
+		writeMutex.Lock()
+		_, errHeader := conn.Write(header)
+		var errPayload error
+		if errHeader == nil {
+			_, errPayload = conn.Write(finalData)
+		}
+		writeMutex.Unlock()
+
+		if errHeader != nil {
+			log.Printf("[TCP Client] Lỗi ghi header: %v. Đóng kết nối để thử lại.", errHeader)
+			closeTCPConnection()
+			continue
+		}
+
+		if errPayload != nil {
+			log.Printf("[TCP Client] Lỗi ghi payload: %v. Đóng kết nối để thử lại.", errPayload)
+			closeTCPConnection()
+			continue
+		}
+
+		log.Printf("[TCP Client] Đã gửi thành công batch gồm %d bản ghi", len(batch))
 		return
 	}
 
-	req.Header.Set("Content-Type", "application/octet-stream")
+	log.Printf("[TCP Client] Gửi batch dữ liệu thất bại sau 3 lần thử.")
+}
 
-	// Thêm Session Token vào Header để xác thực
-	token := currentConfig.SessionToken
-	if token != "" {
-		req.Header.Set("authorization", "Bearer "+token)
-	}
+// readLoop lắng nghe liên tục dữ liệu phản hồi/cảnh báo từ Server qua Socket TCP thô.
+func readLoop(conn net.Conn) {
+	defer func() {
+		log.Println("[TCP Client] Kết thúc luồng đọc từ Server.")
+		closeTCPConnection()
+	}()
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("Failed to send data to server: %v", err)
-		return
-	}
-	defer resp.Body.Close()
+	for {
+		// Đặt ReadDeadline lớn hơn Heartbeat (45 giây) để tự phát hiện nếu mất mạng/server ngắt đột ngột
+		conn.SetReadDeadline(time.Now().Add(45 * time.Second))
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		log.Printf("Token hết hạn hoặc bị từ chối (401/403). Đang Handshake lại...")
-		performHandshake() // Thử lấy lại token cho batch sau
-	} else if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Printf("Successfully sent batch of %d records", len(batch))
-	} else {
-		log.Printf("Server returned non-200 status: %s", resp.Status)
+		// Đọc 5 bytes Header: [Type (1 byte)] + [Length (4 bytes)]
+		header := make([]byte, 5)
+		if _, err := io.ReadFull(conn, header); err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				log.Println("[TCP Client] Timeout chờ đọc dữ liệu từ Server (Heartbeat failure).")
+			} else {
+				log.Printf("[TCP Client] Lỗi đọc từ Socket: %v", err)
+			}
+			return
+		}
+
+		packetType := header[0]
+		length := binary.BigEndian.Uint32(header[1:5])
+
+		// Đọc Payload tương ứng
+		var payload []byte
+		if length > 0 {
+			payload = make([]byte, length)
+			if _, err := io.ReadFull(conn, payload); err != nil {
+				log.Printf("[TCP Client] Lỗi đọc payload (Type 0x%02x): %v", packetType, err)
+				return
+			}
+		}
+
+		// Xử lý các loại gói tin phản hồi từ Server
+		switch packetType {
+		case 0x05:
+			// Pong
+			log.Println("[TCP Client] Nhận phản hồi Pong từ Server.")
+		case 0x06:
+			// Alert Notification từ Server gửi về
+			displayAlertBox(payload)
+		default:
+			log.Printf("[TCP Client] Nhận gói tin không xác định: Type 0x%02x, Length %d", packetType, length)
+		}
 	}
 }
+
+// displayAlertBox hiển thị giao diện hộp thông báo cảnh báo bảo mật ra màn hình terminal của Agent
+func displayAlertBox(payload []byte) {
+	type AlertData struct {
+		RuleID    string `json:"rule_id"`
+		RuleName  string `json:"rule_name"`
+		Level     int    `json:"level"`
+		LogType   string `json:"log_type"`
+		Timestamp string `json:"timestamp"`
+	}
+
+	var data AlertData
+	if err := json.Unmarshal(payload, &data); err != nil {
+		log.Printf("[TCP Alert] Nhận cảnh báo thô: %s", string(payload))
+		return
+	}
+
+	// Xác định màu ANSI dựa trên cấp độ nghiêm trọng của cảnh báo
+	colorCode := "\033[1;33m" // Vàng cho cảnh báo trung bình
+	if data.Level >= 12 {
+		colorCode = "\033[1;31m" // Đỏ cho cảnh báo nguy cấp (Critical)
+	} else if data.Level < 6 {
+		colorCode = "\033[1;32m" // Xanh lá cho cảnh báo nhẹ
+	}
+	resetColor := "\033[0m"
+
+	// Vẽ hộp hiển thị thông tin cảnh báo bắt mắt
+	fmt.Println()
+	fmt.Printf("%s┌────────────────────────────────────────────────────────┐%s\n", colorCode, resetColor)
+	fmt.Printf("%s│                   CẢNH BÁO BẢO MẬT                     │%s\n", colorCode, resetColor)
+	fmt.Printf("%s├────────────────────────────────────────────────────────┤%s\n", colorCode, resetColor)
+	fmt.Printf("%s│ %-54s │%s\n", colorCode, fmt.Sprintf("Nguồn: %s", strings.ToUpper(data.LogType)), resetColor)
+	fmt.Printf("%s│ %-54s │%s\n", colorCode, fmt.Sprintf("Độ nguy hại (Level): %d", data.Level), resetColor)
+	fmt.Printf("%s│ %-54s │%s\n", colorCode, fmt.Sprintf("Luật phát hiện: %s", data.RuleName), resetColor)
+	fmt.Printf("%s│ %-54s │%s\n", colorCode, fmt.Sprintf("Thời gian: %s", data.Timestamp), resetColor)
+	fmt.Printf("%s└────────────────────────────────────────────────────────┘%s\n", colorCode, resetColor)
+	fmt.Println()
+}
+

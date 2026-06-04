@@ -69,7 +69,7 @@ export default function UIHandler(port) {
                 if (data.type === 'FETCH_FIM_LOGS') {
                     if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
                     try {
-                        const logs = await getFimLogs(data.agent_id, data.timeRange);
+                        const logs = await getFimLogs(data.agent_id, data.timeRange, data.page);
                         ws.send(JSON.stringify({ type: 'FIM_LOGS_RESPONSE', payload: logs }));
                     } catch (err) {
                         ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
@@ -81,7 +81,7 @@ export default function UIHandler(port) {
                 if (data.type === 'FETCH_NETPRO_LOGS') {
                     if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
                     try {
-                        const logs = await getNetProLogs(data.agent_id, data.timeRange);
+                        const logs = await getNetProLogs(data.agent_id, data.timeRange, data.page);
                         ws.send(JSON.stringify({ type: 'NETPRO_LOGS_RESPONSE', payload: logs }));
                     } catch (err) {
                         ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
@@ -93,7 +93,7 @@ export default function UIHandler(port) {
                 if (data.type === 'FETCH_SYSLOGS') {
                     if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
                     try {
-                        const logs = await getSyslogs(data.agent_id, data.timeRange);
+                        const logs = await getSyslogs(data.agent_id, data.timeRange, data.page);
                         ws.send(JSON.stringify({ type: 'SYSLOGS_RESPONSE', payload: logs }));
                     } catch (err) {
                         ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));
@@ -105,7 +105,7 @@ export default function UIHandler(port) {
                 if (data.type === 'FETCH_APPLICATIONS') {
                     if (!ws.user) return ws.send(JSON.stringify({ type: 'ERROR', message: 'Chưa xác thực!' }));
                     try {
-                        const apps = await getApplications(data.agent_id, data.timeRange);
+                        const apps = await getApplications(data.agent_id, data.timeRange, data.page);
                         ws.send(JSON.stringify({ type: 'APPLICATIONS_RESPONSE', payload: apps }));
                     } catch (err) {
                         ws.send(JSON.stringify({ type: 'ERROR', message: err.message }));

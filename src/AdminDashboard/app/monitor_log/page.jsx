@@ -51,14 +51,20 @@ const NetproPage = () => {
   const [timeRange, setTimeRange] = useState("24h");
   const [isLive, setIsLive] = useState(true);
   const [sortOrder, setSortOrder] = useState("desc");
+  const [page, setPage] = useState(1);
 
-  // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian
+  // Reset trang khi đổi các bộ lọc hoặc đổi trạng thái Live/Offline
+  useEffect(() => {
+    setPage(1);
+  }, [agentId, isLive, timeRange]);
+
+  // Gửi request lấy historical db logs khi agentId thay đổi, socket kết nối, hoặc đổi chế độ live / khoảng thời gian / trang
   useEffect(() => {
     if (agentId && isConnected) {
       setDbLogs([]); // Clear old state
-      fetchDbLogsViaSocket('FETCH_SYSLOGS', agentId, isLive ? undefined : timeRange);
+      fetchDbLogsViaSocket('FETCH_SYSLOGS', agentId, isLive ? undefined : timeRange, isLive ? 1 : page);
     }
-  }, [agentId, isConnected, isLive, timeRange, fetchDbLogsViaSocket, setDbLogs]);
+  }, [agentId, isConnected, isLive, timeRange, page, fetchDbLogsViaSocket, setDbLogs]);
 
   // Hợp nhất socketLogs (realtime) với dbLogs (historical) và lọc trùng, chuẩn hóa trường tránh lỗi undefined
   const combinedLogs = useMemo(() => {
@@ -391,6 +397,25 @@ const NetproPage = () => {
                   <div>
                     Found: <span className="text-blue-400">{filteredAndSortedLogs.length}</span> result{filteredAndSortedLogs.length > 1 ? "s" : ""}
                   </div>
+                  {!isLive && (
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1 bg-[#141414] hover:bg-[#1C1C1C] border border-[#2A2A2A] text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#141414] disabled:hover:text-gray-400 font-bold transition-all duration-200"
+                      >
+                        PREV PAGE
+                      </button>
+                      <span className="text-gray-400">PAGE {page}</span>
+                      <button
+                        onClick={() => setPage(p => p + 1)}
+                        disabled={dbLogs.length < 1000}
+                        className="px-3 py-1 bg-[#141414] hover:bg-[#1C1C1C] border border-[#2A2A2A] text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#141414] disabled:hover:text-gray-400 font-bold transition-all duration-200"
+                      >
+                        NEXT PAGE
+                      </button>
+                    </div>
+                  )}
                 </div>
 
               </div>
