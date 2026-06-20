@@ -9,6 +9,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import util from 'util';
+import { ZipArchive } from 'archiver';
 
 const execAsync = util.promisify(exec);
 
@@ -178,6 +179,156 @@ const dashController = {
 			console.error('Error stack:', err.stack);
 			console.error('=================================');
 			res.status(500).json({ message: 'Lỗi server', error: err.message });
+		}
+	},
+
+	// Xóa một agent
+	deleteAgent: async (req, res) => {
+		const userId = req.user.userId;
+		const { agent_id } = req.params;
+
+		try {
+			const result = await pool.query(
+				"DELETE FROM agents WHERE agent_id = $1 AND user_id = $2 RETURNING agent_id",
+				[agent_id, userId]
+			);
+
+			if (result.rowCount === 0) {
+				return res.status(404).json({ message: 'Agent không tồn tại hoặc không thuộc quyền sở hữu' });
+			}
+
+			res.json({ message: 'Xóa agent và toàn bộ dữ liệu liên quan thành công', deleted_agent: result.rows[0].agent_id });
+		}
+		catch (err) {
+			console.error('Lỗi khi xóa agent: ', err);
+			res.status(500).json({ message: 'Lỗi server khi xóa agent' });
+		}
+	},
+
+	// Xuất log
+	exportLogs: async (req, res) => {
+		const userId = req.user.userId;
+		const { agents, timeRange, dataTypes } = req.body;
+
+		if (!agents || !timeRange || !dataTypes) {
+			return res.status(400).json({ message: 'Missing required parameters' });
+		}
+
+		try {
+			// Dynamic import archiver
+			const archiverModule = await import('archiver');
+			const archiver = archiverModule.default || archiverModule;
+
+			let targetAgents = [];
+			if (agents === 'all') {
+				const agentsResult = await pool.query("SELECT agent_id, hostname FROM agents WHERE user_id = $1", [userId]);
+				targetAgents = agentsResult.rows;
+			} else if (Array.isArray(agents)) {
+				const agentsResult = await pool.query("SELECT agent_id, hostname FROM agents WHERE user_id = $1 AND agent_id = ANY($2)", [userId, agents]);
+				targetAgents = agentsResult.rows;
+			} else {
+				return res.status(400).json({ message: 'Invalid agents format' });
+			}
+
+			if (targetAgents.length === 0) {
+				return res.status(404).json({ message: 'No valid agents found for export' });
+			}
+
+			let timeCondition = "";
+			let timeParams = [];
+			let currentParamIndex = 1;
+
+			if (timeRange === 'all_time') {
+				timeCondition = `1=1`;
+			} else if (typeof timeRange === 'string') {
+				const value = parseInt(timeRange) || 24;
+				const unitStr = timeRange.replace(/[0-9]/g, '');
+				let interval = '';
+				if (unitStr === 'm') interval = `${value} minutes`;
+				else if (unitStr === 'h') interval = `${value} hours`;
+				else if (unitStr === 'd') interval = `${value} days`;
+				else interval = '30 days';
+
+				timeCondition = `created_at >= NOW() - INTERVAL '${interval}'`;
+			} else if (typeof timeRange === 'object' && timeRange.start && timeRange.end) {
+				timeCondition = `created_at >= $${currentParamIndex++} AND created_at <= $${currentParamIndex++}`;
+				timeParams.push(timeRange.start, timeRange.end);
+			} else {
+				timeCondition = `created_at >= NOW() - INTERVAL '24 hours'`;
+			}
+
+			res.setHeader('Content-Type', 'application/zip');
+			res.setHeader('Content-Disposition', 'attachment; filename="exported_logs.zip"');
+
+			const archive = new ZipArchive({ zlib: { level: 9 } });
+			archive.on('error', (err) => { throw err; });
+			archive.pipe(res);
+
+			const formatToTxt = (rows, type) => {
+				if (rows.length === 0) return "No data recorded for this period.\n";
+				let txt = `=== EXPORTED LOGS: ${type.toUpperCase()} ===\n`;
+				txt += `Total records: ${rows.length}\n\n`;
+				const keys = Object.keys(rows[0]);
+				txt += keys.join(" | ") + "\n";
+				txt += "-".repeat(keys.join(" | ").length) + "\n";
+				rows.forEach(row => {
+					txt += keys.map(k => {
+						let val = row[k];
+						if (val instanceof Date) return val.toISOString();
+						if (val === null || val === undefined) return "N/A";
+						return String(val);
+					}).join(" | ") + "\n";
+				});
+				return txt;
+			};
+
+			const typesToFetch = dataTypes === 'all' ? ['net_pro', 'file_integrity', 'log_monitoring', 'rule_alert', 'applications'] : (Array.isArray(dataTypes) ? dataTypes : [dataTypes]);
+
+			for (const agent of targetAgents) {
+				const agentId = agent.agent_id;
+				const hostname = agent.hostname || 'Unknown';
+				const folderName = `${hostname}_${agentId}`;
+
+				for (const type of typesToFetch) {
+					let query = "";
+					if (type === 'net_pro') {
+						query = `SELECT event_type, pid, comm, file_path, src_ip, dest_ip, protocol, sport, dport, _state, _timestamp, created_at FROM net_pro WHERE agent_id = '${agentId}' AND ${timeCondition} ORDER BY created_at DESC`;
+					} else if (type === 'file_integrity') {
+						query = `SELECT file_path, event_type, old_hash, new_hash, permission, _timestamp, mtime, created_at FROM file_integrity WHERE agent_id = '${agentId}' AND ${timeCondition} ORDER BY created_at DESC`;
+					} else if (type === 'log_monitoring') {
+						query = `SELECT file_path, _service, pid, _action, src_ip, _user, type_log, _timestamp, created_at FROM log_monitoring WHERE agent_id = '${agentId}' AND ${timeCondition} ORDER BY created_at DESC`;
+					} else if (type === 'rule_alert') {
+						query = `SELECT rule_id, packet_level, alert, created_at FROM rule_alert WHERE agent_id = '${agentId}' AND ${timeCondition} ORDER BY created_at DESC`;
+					} else if (type === 'applications') {
+						query = `SELECT software_name, _version FROM applications WHERE agent_id = '${agentId}'`; // applications doesn't have created_at
+					} else {
+						continue;
+					}
+
+					try {
+						// For applications, we don't have timeCondition, so we shouldn't pass timeParams unless it's used. 
+						// But if we pass them to pool.query, postgres will ignore unused $1 $2 ? No, it throws error.
+						// So we must handle it.
+						const isApp = type === 'applications';
+						const finalQuery = isApp ? query : query;
+						const finalParams = isApp ? [] : timeParams;
+
+						const dataResult = await pool.query(finalQuery, finalParams);
+						const txtContent = formatToTxt(dataResult.rows, type);
+						archive.append(txtContent, { name: `${folderName}/${type}.txt` });
+					} catch (err) {
+						archive.append(`Error fetching data: ${err.message}`, { name: `${folderName}/${type}_error.txt` });
+					}
+				}
+			}
+
+			await archive.finalize();
+
+		} catch (err) {
+			console.error('Error during log export:', err);
+			if (!res.headersSent) {
+				res.status(500).json({ message: 'Internal server error during export' });
+			}
 		}
 	}
 };

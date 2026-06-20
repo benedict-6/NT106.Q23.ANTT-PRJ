@@ -17,4 +17,10 @@ router.get('/agents/download/:agent_id', verifyJWT, dashController.downloadAgent
 // GET /api/dashboard/alerts — Lấy danh sách alerts mới nhất
 router.get('/alerts', verifyJWT, dashController.listAlerts);
 
+// DELETE /api/dashboard/agents/:agent_id — Xóa agent
+router.delete('/agents/:agent_id', verifyJWT, dashController.deleteAgent);
+
+// POST /api/dashboard/export — Xuất log
+router.post('/export', verifyJWT, dashController.exportLogs);
+
 export default router;

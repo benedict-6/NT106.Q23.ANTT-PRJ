@@ -225,7 +225,32 @@ export default function FimDashboard() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center self-end md:self-center">
+                  <div className="flex items-center self-end md:self-center gap-4">
+                    <button
+                      onClick={async () => {
+                        const token = localStorage.getItem('token');
+                        try {
+                          const res = await fetch(`${process.env.NEXT_PUBLIC_MASTER_URL}/api/dashboard/export`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ agents: selectedAgent === 'all' ? 'all' : [selectedAgent], timeRange, dataTypes: ['file_integrity'] })
+                          });
+                          if (!res.ok) throw new Error('Failed to export');
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `file_integrity_${selectedAgent}_${timeRange}.zip`;
+                          a.click();
+                        } catch (err) {
+                          alert('Lỗi xuất log: ' + err.message);
+                        }
+                      }}
+                      className="px-4 py-1.5 border border-blue-500/50 bg-blue-900/20 text-blue-400 font-mono font-bold tracking-wider hover:bg-blue-600 hover:text-white transition-colors"
+                    >
+                      EXPORT LOGS
+                    </button>
+
                     <button
                       onClick={() => setIsLive(!isLive)}
                       className={`flex items-center gap-2 px-3 py-1.5 border text-md font-bold font-mono tracking-wider transition-all duration-300 rounded-none ${isLive

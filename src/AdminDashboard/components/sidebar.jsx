@@ -24,6 +24,8 @@ export const SideBar = () => {
                 <Link href="/monitor_app" className="w-full"><SidebarIcon icon={<App size={20} />} active={pathname === '/monitor_app'} title="APP MONITOR" /></Link>
 
                 <Link href="/monitor_log" className="w-full"><SidebarIcon icon={<FileClock size={20} />} active={pathname === '/monitor_log'} title="SYSTEM LOGS" /></Link>
+
+                <Link href="/manage_agents" className="w-full"><SidebarIcon icon={<Shield size={20} />} active={pathname === '/manage_agents'} title="MANAGE AGENTS" /></Link>
             </nav>
         </aside>
     )
