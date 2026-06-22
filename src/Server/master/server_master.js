@@ -45,6 +45,6 @@ pool.query('SELECT NOW()', (err, res) => {
     }
 
     httpServer.listen(masterConfig.port, () => {
-        console.log(`Master Node đang chạy tại port ${masterConfig.port}`);
+        console.log(`Master Node đang chạy tại ${masterConfig.serverURL}`);
     });
 });

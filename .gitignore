@@ -16,3 +16,6 @@ src/AdminDashboard/.env.example
 .env.example
 /.env.ex
 /src/AdminDashboard/.env.example
+/.env.local
+/src/nginx/nginx.conf
+/src/nginx/nginx.conf.local
