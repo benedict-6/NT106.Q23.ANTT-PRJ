@@ -77,12 +77,33 @@ const dashController = {
 	listAlerts: async (req, res) => {
 		try {
 			const result = await pool.query(
-				`SELECT r.rule_alert_id as id, r.agent_id, r.rule_id, r.packet_level, r.created_at, d.rule_name 
+				`SELECT r.rule_alert_id as id, r.agent_id, r.rule_id, r.packet_level, r.created_at, d.rule_name,
+				        row_to_json(np.*) as net_pro_payload,
+				        row_to_json(fi.*) as file_integrity_payload,
+				        row_to_json(lm.*) as log_monitoring_payload
 				 FROM rule_alert r 
 				 LEFT JOIN detection_rules d ON r.rule_id = d.rule_id 
+				 LEFT JOIN net_pro np ON r.net_pro_id = np.net_pro_id AND r.net_pro_created_at = np.created_at
+				 LEFT JOIN file_integrity fi ON r.file_log_id = fi.file_log_id AND r.file_integrity_created_at = fi.created_at
+				 LEFT JOIN log_monitoring lm ON r.log_monitoring_id = lm.log_monitoring_id AND r.log_monitoring_created_at = lm.created_at
 				 ORDER BY r.created_at DESC LIMIT 50`
 			);
-			res.json({ alerts: result.rows });
+
+			// Gộp payload chi tiết vào alert object
+			const alertsWithPayload = result.rows.map(row => {
+				const payload = row.net_pro_payload || row.file_integrity_payload || row.log_monitoring_payload || {};
+				return {
+					id: row.id,
+					agent_id: row.agent_id,
+					rule_id: row.rule_id,
+					packet_level: row.packet_level,
+					created_at: row.created_at,
+					rule_name: row.rule_name,
+					payload: payload
+				};
+			});
+
+			res.json({ alerts: alertsWithPayload });
 		} catch (err) {
 			console.error('Lỗi khi lấy alerts: ', err);
 			res.status(500).json({ message: 'Lỗi server' });

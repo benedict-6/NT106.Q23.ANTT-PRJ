@@ -36,5 +36,6 @@ export const workerConfig = {
 
 export const masterConfig = {
 	port: process.env.PORT_MASTER || 3000,
-	port_socket: process.env.MASTER_SOCKET || 6000
+	port_socket: process.env.MASTER_SOCKET || 6000,
+	serverURL: process.env.SERVER_URL
 }
