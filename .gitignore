@@ -14,8 +14,10 @@ src/agents/siem-agent_1.0.0_amd64.deb
 src/Server/.env.example
 src/AdminDashboard/.env.example
 .env.example
-/.env.ex
+/.env.wan
 /src/AdminDashboard/.env.example
 /.env.local
 /src/nginx/nginx.conf
 /src/nginx/nginx.conf.local
+/src/nginx/nginx.conf.lan
+/src/nginx/nginx.conf.wan
