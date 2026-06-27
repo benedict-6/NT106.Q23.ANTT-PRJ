@@ -32,6 +32,7 @@ class SocketFrameParser {
     constructor(onFrame) {
         this.onFrame = onFrame; // Callback xử lý khi đọc đủ 1 Frame hoàn chỉnh
         this.buffer = Buffer.alloc(0);
+        this.isProcessing = false;
     }
 
     append(chunk) {
@@ -40,7 +41,10 @@ class SocketFrameParser {
         this.process();
     }
 
-    process() {
+    async process() {
+        if (this.isProcessing) return;
+        this.isProcessing = true;
+        try {
         while (true) {
             // Header tối thiểu phải dài 5 bytes (1 byte Type + 4 bytes Length)
             if (this.buffer.length < 5) {
@@ -62,10 +66,13 @@ class SocketFrameParser {
             this.buffer = this.buffer.subarray(5 + length);
 
             try {
-                this.onFrame(type, payload);
+                await this.onFrame(type, payload);
             } catch (err) {
                 console.error("[TCP Frame Parser] Lỗi xử lý callback:", err);
             }
+        }
+        } finally {
+            this.isProcessing = false;
         }
     }
 }
@@ -142,25 +149,23 @@ export function createTcpServer() {
                 const records = await decryptAgentPayload(payload, secretKey);
                 if (records) {
                     console.log(`[TCP Server] Nhận thành công batch gồm ${records.length} bản ghi từ Agent ${agentId}`);
-                    // Xử lý bất đồng bộ các bản ghi qua công cụ rules
-                    (async () => {
-                        for (const record of records) {
-                            const decodedData = { body: record };
-                            try {
-                                if (decodedData.body.type === 'file_integrity') {
-                                    await handleAgentFimReport(decodedData, agentId);
-                                } else if (decodedData.body.type === 'log_monitoring') {
-                                    await handleAgentLogReport(decodedData, agentId);
-                                } else if (decodedData.body.type === 'net_pro') {
-                                    await handleAgentNetProReport(decodedData, agentId);
-                                } else if (decodedData.body.type === 'software_list') {
-                                    await handleAgentSoftwareReport(decodedData, agentId);
-                                }
-                            } catch (err) {
-                                console.error('[TCP Server] Lỗi khi xử lý rules:', err);
+                    // Xử lý tuần tự (hoặc đồng bộ hóa) các bản ghi qua công cụ rules
+                    for (const record of records) {
+                        const decodedData = { body: record };
+                        try {
+                            if (decodedData.body.type === 'file_integrity') {
+                                await handleAgentFimReport(decodedData, agentId);
+                            } else if (decodedData.body.type === 'log_monitoring') {
+                                await handleAgentLogReport(decodedData, agentId);
+                            } else if (decodedData.body.type === 'net_pro') {
+                                await handleAgentNetProReport(decodedData, agentId);
+                            } else if (decodedData.body.type === 'software_list') {
+                                await handleAgentSoftwareReport(decodedData, agentId);
                             }
+                        } catch (err) {
+                            console.error('[TCP Server] Lỗi khi xử lý rules:', err);
                         }
-                    })();
+                    }
                 }
             }
             else if (type === 0x03) {

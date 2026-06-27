@@ -77,16 +77,25 @@ const dashController = {
 	listAlerts: async (req, res) => {
 		try {
 			const result = await pool.query(
-				`SELECT r.rule_alert_id as id, r.agent_id, r.rule_id, r.packet_level, r.created_at, d.rule_name,
+				`WITH recent_alerts AS (
+					SELECT rule_alert_id as id, agent_id, rule_id, packet_level, created_at, 
+						   net_pro_id, net_pro_created_at, 
+						   file_log_id, file_integrity_created_at, 
+						   log_monitoring_id, log_monitoring_created_at
+					FROM rule_alert 
+					ORDER BY created_at DESC 
+					LIMIT 200
+				)
+				SELECT r.id, r.agent_id, r.rule_id, r.packet_level, r.created_at, d.rule_name,
 				        row_to_json(np.*) as net_pro_payload,
 				        row_to_json(fi.*) as file_integrity_payload,
 				        row_to_json(lm.*) as log_monitoring_payload
-				 FROM rule_alert r 
+				 FROM recent_alerts r 
 				 LEFT JOIN detection_rules d ON r.rule_id = d.rule_id 
 				 LEFT JOIN net_pro np ON r.net_pro_id = np.net_pro_id AND r.net_pro_created_at = np.created_at
 				 LEFT JOIN file_integrity fi ON r.file_log_id = fi.file_log_id AND r.file_integrity_created_at = fi.created_at
 				 LEFT JOIN log_monitoring lm ON r.log_monitoring_id = lm.log_monitoring_id AND r.log_monitoring_created_at = lm.created_at
-				 ORDER BY r.created_at DESC LIMIT 50`
+				 ORDER BY r.created_at DESC`
 			);
 
 			// Gộp payload chi tiết vào alert object
@@ -328,15 +337,36 @@ const dashController = {
 
 					try {
 						// For applications, we don't have timeCondition, so we shouldn't pass timeParams unless it's used. 
-						// But if we pass them to pool.query, postgres will ignore unused $1 $2 ? No, it throws error.
-						// So we must handle it.
 						const isApp = type === 'applications';
 						const finalQuery = isApp ? query : query;
 						const finalParams = isApp ? [] : timeParams;
 
-						const dataResult = await pool.query(finalQuery, finalParams);
-						const txtContent = formatToTxt(dataResult.rows, type);
-						archive.append(txtContent, { name: `${folderName}/${type}.txt` });
+						let offset = 0;
+						const limit = 5000;
+						let hasData = false;
+
+						while (true) {
+							const paginatedQuery = `${finalQuery} LIMIT ${limit} OFFSET ${offset}`;
+							const dataResult = await pool.query(paginatedQuery, finalParams);
+
+							if (dataResult.rows.length === 0) {
+								if (!hasData) {
+									// No data at all, just write the empty text
+									archive.append(formatToTxt([], type), { name: `${folderName}/${type}.txt` });
+								}
+								break;
+							}
+
+							hasData = true;
+							const txtContent = formatToTxt(dataResult.rows, type);
+							// Append each chunk as a separate file part or a single file if supported,
+							// but archiver appends files. To keep it simple, we save parts:
+							const fileName = offset === 0 ? `${type}.txt` : `${type}_part${offset / limit + 1}.txt`;
+							archive.append(txtContent, { name: `${folderName}/${fileName}` });
+
+							if (dataResult.rows.length < limit) break; // Reached the end
+							offset += limit;
+						}
 					} catch (err) {
 						archive.append(`Error fetching data: ${err.message}`, { name: `${folderName}/${type}_error.txt` });
 					}

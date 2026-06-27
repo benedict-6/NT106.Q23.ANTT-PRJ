@@ -21,32 +21,31 @@ export default async function receiver(req, res) {
             return res.status(400).json({ message: 'Lỗi giải mã hoặc parse dữ liệu.' });
         }
 
-        // Trả về 200 OK cho Agent ngay lập tức để không block kết nối
-        res.status(200).json({ message: 'Giải mã dữ liệu thành công.' });
+        // Xử lý đồng bộ các bản ghi trong batch để tạo backpressure
+        // Tránh lỗi gửi quá nhanh làm đầy RAM và crash Server (OOM)
+        for (const record of records) {
+            const decodedData = { body: record };
 
-        // Xử lý không đồng bộ các bản ghi trong batch
-        (async () => {
-            for (const record of records) {
-                const decodedData = { body: record };
-
-                try {
-                    if (decodedData.body.type === 'file_integrity') {
-                        await handleAgentFimReport(decodedData, agent_id);
-                    }
-                    else if (decodedData.body.type === 'log_monitoring') {
-                        await handleAgentLogReport(decodedData, agent_id);
-                    }
-                    else if (decodedData.body.type === 'net_pro') {
-                        await handleAgentNetProReport(decodedData, agent_id);
-                    }
-                    else if (decodedData.body.type === 'software_list') {
-                        await handleAgentSoftwareReport(decodedData, agent_id);
-                    }
-                } catch (err) {
-                    console.error('Lỗi khi xử lý bản ghi agent:', err);
+            try {
+                if (decodedData.body.type === 'file_integrity') {
+                    await handleAgentFimReport(decodedData, agent_id);
                 }
+                else if (decodedData.body.type === 'log_monitoring') {
+                    await handleAgentLogReport(decodedData, agent_id);
+                }
+                else if (decodedData.body.type === 'net_pro') {
+                    await handleAgentNetProReport(decodedData, agent_id);
+                }
+                else if (decodedData.body.type === 'software_list') {
+                    await handleAgentSoftwareReport(decodedData, agent_id);
+                }
+            } catch (err) {
+                console.error('Lỗi khi xử lý bản ghi agent:', err);
             }
-        })();
+        }
+
+        // Trả về 200 OK cho Agent SAU KHI xử lý xong
+        return res.status(200).json({ message: 'Giải mã và xử lý dữ liệu thành công.' });
 
     }
     catch (err) {
