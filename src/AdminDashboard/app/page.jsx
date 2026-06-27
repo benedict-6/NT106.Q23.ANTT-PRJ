@@ -19,28 +19,7 @@ const DashboardCard = ({ title, children, className = '', headerAction = null })
     </div>
 );
 
-const generateMockAlerts = () => {
-    const now = Date.now();
-    const mocks = [];
-    const ruleNames = ["Reverse Shell", "SSH Brute Force", "Malware", "Privilege Esc", "Login Success"];
 
-    for (let i = 0; i < 30; i++) {
-        const time = new Date(now - ((29 - i) * 24 * 60 * 1000));
-
-        let level;
-        if (i % 4 === 0) level = Math.floor(Math.random() * 4) + 12;
-        else if (i % 2 === 0) level = Math.floor(Math.random() * 4) + 7;
-        else level = Math.floor(Math.random() * 5) + 1;
-
-        mocks.push({
-            timestamp: time.toISOString(),
-            rule_name: ruleNames[Math.floor(Math.random() * ruleNames.length)],
-            description: "Cảnh báo bảo mật được giả lập...",
-            packet_level: level
-        });
-    }
-    return mocks;
-};
 
 export default function Dashboard() {
     const router = useRouter();
@@ -69,13 +48,9 @@ export default function Dashboard() {
 
                 if (alertRes.ok) {
                     const alertData = await alertRes.json();
-                    if (alertData.alerts && alertData.alerts.length > 0) {
-                        setRawAlerts(alertData.alerts);
-                    } else {
-                        setRawAlerts(generateMockAlerts());
-                    }
+                    setRawAlerts(alertData.alerts || []);
                 } else {
-                    setRawAlerts(generateMockAlerts());
+                    setRawAlerts([]);
                 }
 
                 if (agentRes.ok) {
@@ -83,7 +58,7 @@ export default function Dashboard() {
                     setAgents(agentData.agents || []);
                 }
             } catch (error) {
-                setRawAlerts(generateMockAlerts());
+                setRawAlerts([]);
             }
         };
         fetchData();

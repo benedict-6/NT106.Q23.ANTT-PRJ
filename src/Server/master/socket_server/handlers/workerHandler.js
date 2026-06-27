@@ -87,18 +87,26 @@ export default function WebsocketHandler(port) {
 
 					// Chuyển tiếp cho UI
 					if (activeUIs && activeUIs.size > 0) {
-						const logMessage = JSON.stringify({
-							type: 'NEW_LOG_UI',
-							agent_id: data.agent_id,
-							payload: data.payload,
-							time: new Date().toISOString()
-						});
+						try {
+							const agentRes = await pool.query('SELECT user_id FROM agents WHERE agent_id = $1', [data.agent_id]);
+							if (agentRes.rows.length > 0) {
+								const ownerUserId = agentRes.rows[0].user_id;
+								const logMessage = JSON.stringify({
+									type: 'NEW_LOG_UI',
+									agent_id: data.agent_id,
+									payload: data.payload,
+									time: new Date().toISOString()
+								});
 
-						activeUIs.forEach(uiClient => {
-							if (uiClient.readyState === 1) {
-								uiClient.send(logMessage);
+								activeUIs.forEach(uiClient => {
+									if (uiClient.readyState === 1 && uiClient.user && uiClient.user.userId === ownerUserId) {
+										uiClient.send(logMessage);
+									}
+								});
 							}
-						});
+						} catch (err) {
+							console.error('Lỗi khi query owner cho AGENT_LOG:', err);
+						}
 					}
 				}
 
@@ -109,17 +117,21 @@ export default function WebsocketHandler(port) {
 
 						// Chuyển tiếp trạng thái online lên UI nếu có UI đang mở
 						if (activeUIs && activeUIs.size > 0) {
-							const statusMessage = JSON.stringify({
-								type: 'AGENT_STATUS_UPDATE',
-								agent_id: agent_id,
-								status: 'online',
-								last_active: new Date().toISOString()
-							});
-							activeUIs.forEach(uiClient => {
-								if (uiClient.readyState === 1) {
-									uiClient.send(statusMessage);
-								}
-							});
+							const agentRes = await pool.query('SELECT user_id FROM agents WHERE agent_id = $1', [agent_id]);
+							if (agentRes.rows.length > 0) {
+								const ownerUserId = agentRes.rows[0].user_id;
+								const statusMessage = JSON.stringify({
+									type: 'AGENT_STATUS_UPDATE',
+									agent_id: agent_id,
+									status: 'online',
+									last_active: new Date().toISOString()
+								});
+								activeUIs.forEach(uiClient => {
+									if (uiClient.readyState === 1 && uiClient.user && uiClient.user.userId === ownerUserId) {
+										uiClient.send(statusMessage);
+									}
+								});
+							}
 						}
 					} catch (err) {
 						console.error(`[Master] Lỗi cập nhật last_active cho Agent:`, err.message);
@@ -132,20 +144,28 @@ export default function WebsocketHandler(port) {
 
 					// Chỉ xử lý chuyển tiếp nếu có UI đang kết nối
 					if (activeUIs && activeUIs.size > 0) {
-						// Đóng gói gói tin chuẩn (không bung data payload để tránh hỏng dữ liệu gốc)
-						const alertMessage = JSON.stringify({
-							type: 'NEW_ALERT_UI',
-							agent_id: data.agent_id,
-							payload: data.payload,
-							time: new Date().toISOString()
-						});
+						try {
+							const agentRes = await pool.query('SELECT user_id FROM agents WHERE agent_id = $1', [data.agent_id]);
+							if (agentRes.rows.length > 0) {
+								const ownerUserId = agentRes.rows[0].user_id;
+								// Đóng gói gói tin chuẩn (không bung data payload để tránh hỏng dữ liệu gốc)
+								const alertMessage = JSON.stringify({
+									type: 'NEW_ALERT_UI',
+									agent_id: data.agent_id,
+									payload: data.payload,
+									time: new Date().toISOString()
+								});
 
-						// Gửi data lên UI
-						activeUIs.forEach(uiClient => {
-							if (uiClient.readyState === 1) {
-								uiClient.send(alertMessage);
+								// Gửi data lên UI
+								activeUIs.forEach(uiClient => {
+									if (uiClient.readyState === 1 && uiClient.user && uiClient.user.userId === ownerUserId) {
+										uiClient.send(alertMessage);
+									}
+								});
 							}
-						});
+						} catch (err) {
+							console.error('Lỗi khi query owner cho RULE_ALERT:', err);
+						}
 					} else {
 						// console.log(`[Master] Bỏ qua chuyển tiếp do không có UI nào đang kết nối.`);
 					}
