@@ -7,7 +7,7 @@ Thư mục này chứa mã nguồn toàn bộ của tầng truy xuất dữ li�
 Agent bao gồm nhiều thành phần độc lập đóng vai trò thu thập thông tin và đẩy dữ liệu thu thập được thông qua Unix Domain Socket (`/tmp/agent_queue.sock`) xuống cho module chính làm nhiệm vụ đóng gói. Toàn bộ các module hiện tại sử dụng **Golang**.
 
 Các module hiện tại đang có:
-- **agentCollector**: Module trung tâm. Giữ nhiệm vụ lắng nghe Unix Domain Socket, gộp luồng dữ liệu liên tục từ các module khác, nén qua **Gzip**, mã hóa an toàn qua **AES-GCM 256**, và gửi dữ liệu về Server chính thức (`http://localhost:8080/upload` theo mặc định).
+- **agentCollector**: Module trung tâm. Giữ nhiệm vụ lắng nghe Unix Domain Socket, gộp luồng dữ liệu liên tục từ các module khác, nén qua **Gzip**, mã hóa an toàn qua **AES-GCM 256**, và gửi dữ liệu về Server chính thức thông qua kết nối **TCP Socket** thời gian thực (sau khi thực hiện HTTP handshake xác thực ban đầu).
 - **NetProCollector**: Thu thập dữ liệu TCP/UDP và tiến trình sử dụng công nghệ `eBPF` (các syscall hook dựa trên `vmlinux.h`). eBPF hook được viết bằng C và chạy bằng `ecli`. Tuy nhiên, trình đọc output và gửi dữ liệu qua socket được quản lý bởi Golang.
 - **LogCollector**: Module Golang đọc và báo cáo log xác thực liên tục từ thư mục hệ thống (ví dụ: `/var/log/auth.log`, `/var/log/audit/audit.log`, `/var/log/syslog`).
 - **FileCollector**: Trình giả lập FIM (File Integrity Monitoring). Viết bằng Golang, sử dụng package `syscall` inotify mặc định trên Linux để theo dõi sự thay đổi (`IN_MODIFY`, `IN_ATTRIB`) trên `/etc/passwd`, `/etc/shadow`, `/etc/sudoers`. Dùng `os/exec` gọi lệnh `sha256sum` để tạo chuỗi băm.
@@ -68,7 +68,7 @@ go run main.go
 - Hãy thử tạo tác động như: 
   - Thêm nội dung vào `/var/log/auth.log` (`LogCollector`).
   - Sửa quyền hoặc nội dung `/etc/passwd` (`FileCollector`).
-- Tại cổng `localhost:8080`, dữ liệu AES-GCM nén lại sẽ được gửi kèm header `Content-Encoding: aes-gcm`. Đảm bảo tại back-end server có sử dụng cặp secret key giống nhau để giải mã.
+- Tại máy chủ Server, dữ liệu AES-GCM nén lại sẽ được đẩy qua luồng TCP dài hạn liên tục tới Worker Node (hoặc Load Balancer). Đảm bảo Server Backend đang chạy và Master Node đã được khởi chạy với cùng một tập tin bí mật (secret_key) để giải mã chính xác (cấp phát qua token).
 
 ## 5. Đóng gói và Cài đặt tự động (.deb)
 

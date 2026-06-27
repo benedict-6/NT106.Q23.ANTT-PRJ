@@ -78,12 +78,14 @@ const dashController = {
 		try {
 			const result = await pool.query(
 				`WITH recent_alerts AS (
-					SELECT rule_alert_id as id, agent_id, rule_id, packet_level, created_at, 
-						   net_pro_id, net_pro_created_at, 
-						   file_log_id, file_integrity_created_at, 
-						   log_monitoring_id, log_monitoring_created_at
-					FROM rule_alert 
-					ORDER BY created_at DESC 
+					SELECT r.rule_alert_id as id, r.agent_id, r.rule_id, r.packet_level, r.created_at, 
+						   r.net_pro_id, r.net_pro_created_at, 
+						   r.file_log_id, r.file_integrity_created_at, 
+						   r.log_monitoring_id, r.log_monitoring_created_at
+					FROM rule_alert r
+					JOIN agents a ON r.agent_id = a.agent_id
+					WHERE a.user_id = $1
+					ORDER BY r.created_at DESC 
 					LIMIT 200
 				)
 				SELECT r.id, r.agent_id, r.rule_id, r.packet_level, r.created_at, d.rule_name,
@@ -95,7 +97,8 @@ const dashController = {
 				 LEFT JOIN net_pro np ON r.net_pro_id = np.net_pro_id AND r.net_pro_created_at = np.created_at
 				 LEFT JOIN file_integrity fi ON r.file_log_id = fi.file_log_id AND r.file_integrity_created_at = fi.created_at
 				 LEFT JOIN log_monitoring lm ON r.log_monitoring_id = lm.log_monitoring_id AND r.log_monitoring_created_at = lm.created_at
-				 ORDER BY r.created_at DESC`
+				 ORDER BY r.created_at DESC`,
+				[req.user.userId]
 			);
 
 			// Gộp payload chi tiết vào alert object

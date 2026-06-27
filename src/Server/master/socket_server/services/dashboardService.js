@@ -4,7 +4,7 @@ import pool from '../../../shared/database/connect.js';
  * Lấy toàn bộ dữ liệu thống kê tổng quan cho Dashboard UI
  * Dùng Promise.all để thực thi truy vấn song song, tối ưu tốc độ.
  */
-export const getDashboardOverview = async () => {
+export const getDashboardOverview = async (userId) => {
     try {
         // Query song song để không bị nghẽn (Block) I/O
         const [agentsResult, alertsResult, statsResult] = await Promise.all([
@@ -12,21 +12,26 @@ export const getDashboardOverview = async () => {
             pool.query(`
                 SELECT agent_id, hostname, ip_address, agent_status 
                 FROM agents
-            `),
+                WHERE user_id = $1
+            `, [userId]),
 
             // 2. Lấy danh sách 50 cảnh báo mới nhất
             pool.query(`
-                SELECT rule_alert_id, agent_id, rule_id, packet_level, alert, created_at 
-                FROM rule_alert 
-                ORDER BY created_at DESC 
+                SELECT r.rule_alert_id, r.agent_id, r.rule_id, r.packet_level, r.alert, r.created_at 
+                FROM rule_alert r
+                JOIN agents a ON r.agent_id = a.agent_id
+                WHERE a.user_id = $1
+                ORDER BY r.created_at DESC 
                 LIMIT 50
-            `),
+            `, [userId]),
 
             // 3. Đếm tổng số cảnh báo từ trước đến nay
             pool.query(`
                 SELECT COUNT(*) as total_alerts 
-                FROM rule_alert
-            `)
+                FROM rule_alert r
+                JOIN agents a ON r.agent_id = a.agent_id
+                WHERE a.user_id = $1
+            `, [userId])
         ]);
 
         return {
@@ -70,12 +75,15 @@ const getTimeRangeInterval = (timeRange) => {
 /**
  * Lấy danh sách logs FIM từ database cho 1 agent hoặc tất cả agents
  */
-export const getFimLogs = async (agentId, timeRange, page = 1) => {
+export const getFimLogs = async (userId, agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT file_log_id as id, agent_id, file_path, event_type, old_hash, new_hash, _uid, gid, inode, _size, permission, _timestamp as timestamp, mtime, created_at
                      FROM file_integrity`;
         const conditions = [];
         const params = [];
+
+        params.push(userId);
+        conditions.push(`agent_id IN (SELECT agent_id FROM agents WHERE user_id = $${params.length})`);
 
         if (agentId && agentId !== 'all') {
             params.push(agentId);
@@ -109,12 +117,15 @@ export const getFimLogs = async (agentId, timeRange, page = 1) => {
 /**
  * Lấy danh sách logs NetPro từ database cho 1 agent hoặc tất cả agents
  */
-export const getNetProLogs = async (agentId, timeRange, page = 1) => {
+export const getNetProLogs = async (userId, agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT net_pro_id as id, agent_id, event_type, pid, ppid, _uid, gid, comm, file_path, exit_code, src_ip, dest_ip, protocol, sport, dport, _state, _timestamp as timestamp, created_at
                      FROM net_pro`;
         const conditions = [];
         const params = [];
+
+        params.push(userId);
+        conditions.push(`agent_id IN (SELECT agent_id FROM agents WHERE user_id = $${params.length})`);
 
         if (agentId && agentId !== 'all') {
             params.push(agentId);
@@ -148,12 +159,15 @@ export const getNetProLogs = async (agentId, timeRange, page = 1) => {
 /**
  * Lấy danh sách logs Syslog/System từ database cho 1 agent hoặc tất cả agents
  */
-export const getSyslogs = async (agentId, timeRange, page = 1) => {
+export const getSyslogs = async (userId, agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT log_monitoring_id as id, agent_id, file_path, _timestamp as timestamp, _service as service, pid, _action as action, src_ip, _user as "user", port, type_log, created_at
                      FROM log_monitoring`;
         const conditions = [];
         const params = [];
+
+        params.push(userId);
+        conditions.push(`agent_id IN (SELECT agent_id FROM agents WHERE user_id = $${params.length})`);
 
         if (agentId && agentId !== 'all') {
             params.push(agentId);
@@ -187,12 +201,15 @@ export const getSyslogs = async (agentId, timeRange, page = 1) => {
 /**
  * Lấy danh sách ứng dụng đã cài đặt từ database cho 1 agent hoặc tất cả agents
  */
-export const getApplications = async (agentId, timeRange, page = 1) => {
+export const getApplications = async (userId, agentId, timeRange, page = 1) => {
     try {
         let query = `SELECT app_id as id, agent_id, software_name, _version
                      FROM applications`;
         const conditions = [];
         const params = [];
+
+        params.push(userId);
+        conditions.push(`agent_id IN (SELECT agent_id FROM agents WHERE user_id = $${params.length})`);
 
         if (agentId && agentId !== 'all') {
             params.push(agentId);
